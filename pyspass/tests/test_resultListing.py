@@ -4,6 +4,7 @@ from unittest import TestCase
 from pyspass import ResultListing
 
 
+
 class TestResultListing(TestCase):
 
     def setUp(self):
@@ -42,14 +43,13 @@ class TestResultListing(TestCase):
         r1 = ResultListing(content, mapping=['XYZ', 'ABC'])
         # no error
 
-#     def test_result_listing(self):
-#         content = [{'column_1': 1, 'column_2': 2}]
-#         r1 = ResultListing(content)
-#         assert(str(r1).strip() == """<table >
-# <tr ><th >column_1<th/><th >column_2<th/>
-# <tr/>
-# <tr ><td >1<td/><td >2<td/>
-# <tr/>
-# </table>""")
+    def test_column_alignment(self):
+        content = [{'column_1': 1, 'column_2': 2, 'column_3': 3}]
+        r1 = ResultListing(content, alignments="lrc")
+        assert "right" in str(r1)
+        assert "center" in str(r1)
+        assert "left" in str(r1)
+
+
 if __name__ == '__main__':
     unittest.main()

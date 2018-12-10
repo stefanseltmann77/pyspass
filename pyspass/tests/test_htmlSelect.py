@@ -21,7 +21,7 @@ class TestHtmlSelect(TestCase):
         self.assertIn('<option value="A">A</option>', str(drop))
         self.assertIn('<option value="B">B</option>', str(drop))
 
-    def test_dropdown_with_content_as_list_and_input_as_str(self):
+    def test_dropdown_with_content_as_list_and_input_asaw_str(self):
         div = HtmlDiv()
         drop = div.dropdown('abc', ['A', 'B', 'C', 'D'], var_input='B')
         self.assertIn('<option value="B" selected="selected">B</option>', str(drop))

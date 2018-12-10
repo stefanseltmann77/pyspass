@@ -1,9 +1,8 @@
 from abc import ABCMeta
 from abc import abstractmethod
-from typing import Optional
-from typing import Union
-from logging import getLogger
 from logging import Logger
+from logging import getLogger
+from typing import Dict, List, Optional, Union, Tuple
 
 
 class HtmlObject(metaclass=ABCMeta):
@@ -36,10 +35,8 @@ class HtmlObject(metaclass=ABCMeta):
                 parent_form = self.parent.get_form()
             if parent_form and (parent_form.get_form() or
                                 isinstance(self, HtmlForm)):
-                raise Exception("Nested forms detected! {} within {}.".format(parent_form.id_html,
-                                                                              parent_form.get_form().id_html
-                                                                              if parent_form.get_form()
-                                                                              else self.id_html))
+                debug_str = parent_form.get_form().id_html if parent_form.get_form() else self.id_html
+                raise Exception(f"Nested forms detected! {parent_form.id_html} within {debug_str}.")
         return parent_form
 
 
@@ -144,8 +141,8 @@ class HtmlContainer(HtmlObject, list, metaclass=ABCMeta):
         self.add(script)
         return script
 
-    def dropdown(self, name, codes_source, var_input=None, autosubmit: bool = False, missing_allowed: bool = True,
-                 multiple: bool = False, size: int = 1, optgroups: dict = None):
+    def dropdown(self, name, codes_source: Union[List, Dict], var_input=None, autosubmit: bool = False,
+                 missing_allowed: bool = True, multiple: bool = False, size: int = 1, optgroups: dict = None):
         return self.add(HtmlSelect(**{key: value for key, value in locals().items() if key not in 'self'}))
 
     def textinput(self, name, var_input=None, size: int = 20):
@@ -157,11 +154,13 @@ class HtmlContainer(HtmlObject, list, metaclass=ABCMeta):
     def textarea(self, name, var_input=None, rows: int = 4, cols: int = 50):
         return self.add(HtmlTextArea(**{key: value for key, value in locals().items() if key not in 'self'}))
 
-    def result_listing(self, content: list, mapping=None, show_all: bool = False, alignments=None) -> 'ResultListing':
+    def result_listing(self, content: list, mapping=None, show_all: bool = False,
+                       alignments=None) -> Union['ResultListing', HtmlObject]:
         return self.add(ResultListing(**{key: value for key, value in locals().items() if key not in 'self'}))
 
-    def result_choice(self, content: list, listing_index, row_selected=None, mapping=None, show_all: bool = False,
-                      alignments=None, rowcount_max: int = 200):
+    def result_choice(self, content: list, listing_index: Union[str, tuple, list], row_selected=None,
+                      mapping: Dict[str, str] = None, show_all: bool = False, alignments=None,
+                      rowcount_max: int = 200) -> Union['ResultChoice', HtmlObject]:
         return self.add(ResultChoice(**{key: value for key, value in locals().items() if key not in 'self'}))
 
     def result_editor(self, content: list, listing_index, row_selected=None, mapping=None, show_all: bool = False,
@@ -172,10 +171,9 @@ class HtmlContainer(HtmlObject, list, metaclass=ABCMeta):
         if self.css_styles:
             css_styles_str = ';'.join([key + ':' + value for key, value in self.css_styles.items()])
             self.tag_content['style'] = css_styles_str
-        tag_content_str = ' '.join(['{}="{}"'.format(key, value) for key, value in self.tag_content.items()])
-        return '<{}{}>\n{}\n</{}>\n'.format(self.TAG,
-                                            ' ' + tag_content_str if tag_content_str else '',
-                                            ''.join([str(child) for child in self]), self.TAG)
+        tag_content_str = ' '.join([f'{key}="{value}"' for key, value in self.tag_content.items()])
+        return f"<{self.TAG}{' ' + tag_content_str if tag_content_str else ''}>" \
+            f"\n{''.join([str(child) for child in self])}\n</{self.TAG}>\n"
 
 
 class HtmlTable(HtmlContainer):
@@ -188,18 +186,18 @@ class HtmlTable(HtmlContainer):
         self._column_alignments = None
 
     def __str__(self):
-        tag_content_str = ' '.join(['{}="{}"'.format(key, value) for key, value in self.tag_content.items()])
-        return '<{} {}>{}\n</{}>\n'.format(self.TAG, tag_content_str, ''.join([str(item) for item in self]), self.TAG)
+        tag_content_str = ' '.join([f'{key}="{value}"' for key, value in self.tag_content.items()])
+        return f'<{self.TAG} {tag_content_str}>{"".join([str(item) for item in self])}\n</{self.TAG}>\n'
 
     def tr(self):
         row = HtmlRow()
         self.add(row)
         return row
 
-    def set_column_alignments(self, alignmments):
+    def set_column_alignments(self, alignments: str):
         alignment_map = {'r': 'right', 'c': 'center', 'l': 'left'}
         for row in self:
-            for i, alignment in enumerate(alignmments[0]):
+            for i, alignment in enumerate(alignments):
                 if i < len(row):
                     row[i].css_styles["text-align"] = alignment_map[alignment]
                 else:
@@ -207,9 +205,12 @@ class HtmlTable(HtmlContainer):
 
 
 class ResultListing(HtmlContainer):
+    """Display object that renders as tabular dataset (nested list) as a html table."""
+
     table: HtmlTable
 
-    def __init__(self, content: list, mapping=None, show_all: bool = False, rowcount_max: int = 200, alignments=None):
+    def __init__(self, content: list, mapping=None, show_all: bool = False, rowcount_max: int = 200,
+                 alignments=None):
         super().__init__()
         self.show_all = show_all
         self.content: list = content
@@ -277,13 +278,27 @@ class ResultListing(HtmlContainer):
 
 
 class ResultChoice(ResultListing):
-    def __init__(self, content: list, listing_index, row_selected, mapping=None, show_all: bool = False,
-                 rowcount_max: int = 200, alignments=None):
+    """Display object similar to ResultListing, but allows selection of rows"""
+
+    PREFIX: str = '_rct_selected_'
+
+    _index: Tuple = None
+
+    def __init__(self, content: list, listing_index: str, row_selected: Union[str, Dict],
+                 mapping: Dict[str, str] = None, show_all: bool = False, rowcount_max: int = 200, alignments=None):
+        """
+
+        :param content:
+        :param listing_index:
+        :param row_selected:
+        :param mapping:
+        :param show_all:
+        :param rowcount_max:
+        :param alignments:
+        """
         super().__init__(content, mapping, show_all, rowcount_max, alignments)
-        self.row_selected = row_selected
-        self._index = None
+        self.row_selected = row_selected or {}
         self.listing_index = listing_index
-        self.prefix: str = '_rct_selected_'
         self.columns_config: dict = {}
         self.columns_with_mappings: list = []
 
@@ -293,40 +308,45 @@ class ResultChoice(ResultListing):
 
     @listing_index.setter
     def listing_index(self, value):
-        self._index = value
+        self._index = value if not isinstance(value, str) else (value,)
 
     def compose(self):
         parent_form = self.get_form()
-        if not isinstance(parent_form, HtmlForm):  # fixme
-            raise Exception('Resultchoices have to be direct or indirect children of asform with a unique ID!')
-
-        id_html_parentform = parent_form.id_html
+        if not isinstance(parent_form, HtmlForm):
+            raise Exception('ResultChoices have to be direct or indirect children of a form with an unique ID!')
+        id_html_parentform: str = parent_form.id_html
         if not id_html_parentform:
-            raise Exception("Only works if parent Form has unique ID")
+            raise Exception("Only works if parent form has unique ID")
         # FIXME: doesn't have to be parents
         content = self.content or []
-        if len(content) > 0 and self.listing_index not in content[0]:
-            raise Exception("Listing_index '{}' not in list content ({})!".format(self.listing_index,
-                                                                                  list(content[0].keys())))
+        if len(content) > 0:  # FIXME test an rewrite without >0
+            for index_col in self._index:
+                if index_col not in content[0]:  # todo rewrite with sets, rewrite with any or all
+                    raise Exception(
+                        f"Listing_index '{index_col}' not in list content ({list(content[0].keys())})!")
         for i, row_dat in enumerate(content):  # TODO or list somewhere else
             if i < self.rowcount_max:
-                row = self.table[i + 1]  # +1 for header
-                row.tag_content["onclick"] = \
-                    "entryChoiceSetSelection('{}', {});".format(id_html_parentform,
-                                                                "{{'{}':'{}'}}".format(
-                                                                    self._index,
-                                                                    row_dat[self.listing_index]))
-                if str(row_dat[self._index]) == str(self.row_selected):
+                row: HtmlRow = self.table[i + 1]  # +1 for header
+                json = ",".join(f"'{index_col}':'{row_dat[index_col]}'" for index_col in self._index)
+                row.tag_content["onclick"] = f"entryChoiceSetSelection('{id_html_parentform}', {{{json}}});"
+                if isinstance(self.row_selected, str) and str(row_dat[self._index[0]]) == str(self.row_selected):
+                    # simple input for one column index
+                    # todo put string in setter
+                    # FIXME put selected row in dictionary
+                    self._build_selected_row(row)
+                elif not isinstance(self.row_selected, (str, int)) and \
+                        all(str(row_dat[index_col]) == str(self.row_selected.get(index_col))
+                            for index_col in self._index):
                     self._build_selected_row(row)
                 elif self.columns_with_mappings:
                     for column_name in self.columns_with_mappings:
                         column_index = self.columns_display.index(column_name)
                         row[column_index][0] = self.columns_config[column_name]['codes'].get(row[column_index][0],
                                                                                              row[column_index][0])
-                    pass
             else:
                 break
-        self.hidden(name=self.prefix + self._index, value=self.row_selected, id_html=self.prefix + self._index)
+        for index_col in self._index:
+            self.hidden(name=self.PREFIX + index_col, value=self.row_selected, id_html=self.PREFIX + index_col)
 
     def _build_selected_row(self, row):
         row.css_styles['color'] = 'white'
@@ -377,7 +397,7 @@ class ResultEditor(ResultChoice):
                     cell_input.textinput(column_current, var_input=cell[0] if cell else None)
                 row[i] = cell_input
         cell_submit = row.td()
-        button = cell_submit.submit('submit_save_resulteditor', 'save')  # fokus on selected line
+        button = cell_submit.submit('submit_save_resulteditor', 'save')  # focus on selected line
         button.tag_content['autofocus'] = 'autofocus'
 
 
@@ -395,7 +415,7 @@ class HtmlPage:
         return "</?xml version=\"1.0\" encoding=\"utf-8\" ?>\n" \
                "<!DOCTYPE html>\n" \
                "<html xmlns=\"http://www.w3.org/1999/xhtml\"" \
-               "xml:lang=\"de\" lang=\"de\">\n{}\n{}\n</html>\n".format(str(self.head), str(self.body))
+            f"xml:lang=\"de\" lang=\"de\">\n{self.head}\n{self.body}\n</html>\n"
 
 
 class HtmlBody(HtmlContainer):
@@ -423,8 +443,8 @@ class HtmlInput(HtmlObject):
     TAG: str = 'input'
 
     def __str__(self):
-        tag_content_str = ' '.join(['{}="{}"'.format(key, value) for key, value in self.tag_content.items()])
-        return '<{} {}/>'.format(self.TAG, tag_content_str)
+        tag_content_str = ' '.join([f'{key}="{value}"' for key, value in self.tag_content.items()])
+        return f'<{self.TAG} {tag_content_str}/>'
 
 
 class HtmlH1(HtmlContainer):
@@ -607,8 +627,8 @@ class HtmlTextArea(HtmlInput):
         self.var_input: str = var_input
 
     def __str__(self):
-        tag_content_str = ' '.join(['{}="{}"'.format(key, value) for key, value in self.tag_content.items()])
-        return '<{} {}>{}</{}>'.format(self.TAG, tag_content_str, self.var_input, self.TAG)
+        tag_content_str = ' '.join([f'{key}="{value}"' for key, value in self.tag_content.items()])
+        return f'<{self.TAG} {tag_content_str}>{self.var_input}</{self.TAG}>'
 
 
 class HtmlRadio(HtmlInput):
@@ -640,8 +660,18 @@ class HtmlSelect(HtmlInput):
 
     codes_source: dict = None
 
-    def __init__(self, name, codes_source, var_input=None, autosubmit: bool = False, missing_allowed: bool = False,
-                 multiple: bool = False, size: int = 1, optgroups: dict = None):
+    def __init__(self, name, codes_source: Union[Dict, List], var_input=None, autosubmit: bool = False,
+                 missing_allowed: bool = False, multiple: bool = False, size: int = 1, optgroups: dict = None):
+        """Dropdown element.
+
+        :param codes_source:
+        :param var_input:
+        :param autosubmit:
+        :param missing_allowed:
+        :param multiple:
+        :param size:
+        :param optgroups:
+        """
         super().__init__()
         self.tag_content = {'name': name}
         if isinstance(codes_source, list):
@@ -671,7 +701,7 @@ class HtmlSelect(HtmlInput):
             self.tag_content['multiple'] = 'multiple'
             self.tag_content['name'] += '[]'
             self.tag_content['size'] = self.size
-        tag_content_str = ' '.join(['{}="{}"'.format(key, value) for key, value in self.tag_content.items()])
+        tag_content_str = ' '.join([f'{key}="{value}"' for key, value in self.tag_content.items()])
 
         codes_source_actual = self.codes_source if not self.missing_allowed else \
             {**{self._missing_code_id: self._missing_code_label}, **self.codes_source}
@@ -699,7 +729,7 @@ class HtmlSelect(HtmlInput):
                 option.add(label)
                 content.append(option)
         option_str = '\n'.join([str(obt).replace('\n', '') for obt in content])
-        return '<{} {}>{}\n</{}>\n'.format(self.TAG, tag_content_str, option_str, self.TAG)
+        return f'<{self.TAG} {tag_content_str}>{option_str}\n</{self.TAG}>\n'
 
 
 class HtmlCell(HtmlContainer):
@@ -716,13 +746,23 @@ class HtmlHeadCell(HtmlCell):
 
 
 class HtmlRow(HtmlContainer):
+    """Object for standard HTML row"""
     TAG: str = 'tr'
 
     def td(self, content=None) -> Union[HtmlObject, HtmlCell]:
         return self.add(HtmlCell(content))
 
-    def th(self, content=None) -> Union[HtmlObject, HtmlCell]:
-        return self.add(HtmlHeadCell(content))
+    def th(self, content: Union[str, List[str], Tuple[str]] = None) -> \
+            Union[Union[HtmlCell, HtmlObject], Union[List[HtmlCell], List[HtmlObject]]]:
+        """Create and add a new header cell object
+
+        :param content: May be the string contained in the cell or an object or a list of both
+        :return: Returns the created cell or list of cells
+        """
+        if isinstance(content, list) or isinstance(content, tuple):
+            return [self.add(HtmlHeadCell(content_piece)) for content_piece in content]
+        else:
+            return self.add(HtmlHeadCell(content))
 
 
 class PySpassStorage:
@@ -789,7 +829,7 @@ class PySpassApp(metaclass=ABCMeta):
     def __init__(self, app_name: str, request: PySpassRequest, session: PySpassSession):
         """
 
-        :param app_name: distinct name for the aation, also as seed for certain elements in form
+        :param app_name: distinct name for the action, also as seed for certain elements in form
         """
         self.app_name = app_name
         self.request = request
@@ -827,7 +867,7 @@ class PySpassApp(metaclass=ABCMeta):
                                                               self.request.get(self.app_name + "_password_entry"))
             if login_success:
                 self.session["success_login"] = True
-                self.logger.debug("Login successfull")
+                self.logger.debug("Login successful")
                 return True
             else:
                 self.display_login_form()
