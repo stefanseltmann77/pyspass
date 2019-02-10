@@ -161,6 +161,7 @@ class HtmlContainer(HtmlObject, list, metaclass=ABCMeta):
     def result_choice(self, content: list, listing_index: Union[str, tuple, list], row_selected=None,
                       mapping: Dict[str, str] = None, show_all: bool = False, alignments=None,
                       rowcount_max: int = 200) -> Union['ResultChoice', HtmlObject]:
+        """Factory function for creation of ResultChoice"""
         return self.add(ResultChoice(**{key: value for key, value in locals().items() if key not in 'self'}))
 
     def result_editor(self, content: list, listing_index, row_selected=None, mapping=None, show_all: bool = False,
@@ -338,7 +339,7 @@ class ResultChoice(ResultListing):
                         all(str(row_dat[index_col]) == str(self.row_selected.get(index_col))
                             for index_col in self._index):
                     self._build_selected_row(row)
-                elif self.columns_with_mappings:
+                if self.columns_with_mappings:
                     for column_name in self.columns_with_mappings:
                         column_index = self.columns_display.index(column_name)
                         row[column_index][0] = self.columns_config[column_name]['codes'].get(row[column_index][0],
@@ -355,8 +356,14 @@ class ResultChoice(ResultListing):
     def set_codes(self, column_name: str, codes: Union[list, dict], multichoice: bool = False, display_size: int = 1):
         """Assign a code mapping to a given column name.
 
-        Codes within the column will be replaced by values from the mapping.
+        Codes/values within the column will be replaced by values from the mapping.
         All keys are converted to strings in order to simplify retrieval.
+
+        :param column_name:
+        :param codes:
+        :param multichoice:
+        :param display_size:
+        :return:
         """
         try:
             self.columns_config.setdefault(column_name, {})['codes'] = {str(key): value for key, value in codes.items()}

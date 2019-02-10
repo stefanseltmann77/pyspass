@@ -15,6 +15,11 @@ class TestResultChoice(TestCase):
         rl = html_form.result_choice(content=self.content_as_dict, listing_index='column_1', row_selected=None)
         rl.compose()
 
+    def test_setter_listing_index(self):
+        html_form = HtmlForm(id_html='form_id')
+        rl = html_form.result_choice(content=self.content_as_dict, listing_index='column_1', row_selected=None)
+        assert rl.listing_index == ('column_1',)
+
     def test_constructor_empty_content(self):
         html_form = HtmlForm(id_html='form_id')
         rl = html_form.result_choice(content=None, listing_index='column_1', row_selected=None)
@@ -22,11 +27,13 @@ class TestResultChoice(TestCase):
 
     def test_multiple_index(self):
         html_form = HtmlForm(id_html='form_id')
-        rl = html_form.result_choice(content=self.content_as_dict, listing_index=['column_1'], row_selected=None)
-        with self.assertRaises(TypeError):
-            rl.compose()
+        rl = html_form.result_choice(content=self.content_as_dict, listing_index=['column_1', 'column_2'],
+                                     row_selected={})
+        rl.compose()
+        print(rl)  # todo elaborate
 
     def test_indirect_format_id(self):
+        # Fixme
         html_form = HtmlForm(id_html='form_id')
         html_div = html_form.div()
         rl = html_div.result_choice(content=self.content_as_dict, listing_index='column_1', row_selected=None)
