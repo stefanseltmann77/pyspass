@@ -8,6 +8,13 @@ from typing import Dict, List, Optional, Union, Tuple
 class HtmlObject(metaclass=ABCMeta):
     TAG: str
 
+    ALIGNMENT_MAP = {'r': 'right',
+                     'right': 'right',
+                     'l': 'left',
+                     'left': 'left',
+                     'c': 'center',
+                     'center': 'center'}
+
     def __init__(self, id_html: str = None, class_html: str = None):
         self.tag_content: dict = {}
         self.css_styles: dict = {}
@@ -145,7 +152,7 @@ class HtmlContainer(HtmlObject, list, metaclass=ABCMeta):
                  missing_allowed: bool = True, multiple: bool = False, size: int = 1, optgroups: dict = None):
         return self.add(HtmlSelect(**{key: value for key, value in locals().items() if key not in 'self'}))
 
-    def textinput(self, name, var_input=None, size: int = 20):
+    def textinput(self, name, var_input=None, size: int = 20, alignment: str = None):
         return self.add(HtmlTextInput(**{key: value for key, value in locals().items() if key not in 'self'}))
 
     def password(self, name, var_input=None, size: int = 20):
@@ -196,11 +203,10 @@ class HtmlTable(HtmlContainer):
         return row
 
     def set_column_alignments(self, alignments: str):
-        alignment_map = {'r': 'right', 'c': 'center', 'l': 'left'}
         for row in self:
             for i, alignment in enumerate(alignments):
                 if i < len(row):
-                    row[i].css_styles["text-align"] = alignment_map[alignment]
+                    row[i].css_styles["text-align"] = self.ALIGNMENT_MAP[alignment]
                 else:
                     break
 
@@ -450,6 +456,8 @@ class HtmlInput(HtmlObject):
     TAG: str = 'input'
 
     def __str__(self):
+        if self.css_styles:
+            self.tag_content['style'] = ";".join([f"{key}: {value}" for key, value in self.css_styles.items()])
         tag_content_str = ' '.join([f'{key}="{value}"' for key, value in self.tag_content.items()])
         return f'<{self.TAG} {tag_content_str}/>'
 
@@ -600,7 +608,7 @@ class HtmlButton(HtmlInput):
 
 
 class HtmlTextInput(HtmlInput):
-    def __init__(self, name: str, var_input=None, size=20):
+    def __init__(self, name: str, var_input=None, size: int = 20, alignment: str = None):
         super().__init__()
         self.tag_content = {'type': 'text',
                             'name': name,
@@ -608,6 +616,11 @@ class HtmlTextInput(HtmlInput):
                             'id': name}
         if var_input:
             self.tag_content['value'] = var_input
+        if alignment:
+            if alignment in self.ALIGNMENT_MAP:
+                self.css_styles['text-align'] = self.ALIGNMENT_MAP[alignment]
+            else:
+                pass  # todo add debugging error
 
 
 class HtmlPassword(HtmlInput):
