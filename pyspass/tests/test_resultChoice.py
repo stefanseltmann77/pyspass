@@ -1,8 +1,10 @@
 import unittest
 from unittest import TestCase
 
-from pyspass import ResultChoice
+from sqlalchemy import Table, MetaData, Column, Integer, String, select
+
 from pyspass import HtmlForm
+from pyspass import ResultChoice
 
 
 class TestResultChoice(TestCase):
@@ -60,6 +62,23 @@ class TestResultChoice(TestCase):
                                                    row_selected=None)
         rl.set_codes("column_1", {1: "a", 2: "c"})
         rl.compose()
+
+    def test_with_alchemy(self):
+        from sqlalchemy import create_engine
+        con = create_engine('sqlite://').connect()
+        meta = MetaData(bind=con)
+        tab = Table("test_table", meta,
+                    Column("column_a", Integer),
+                    Column("column_b", String))
+        meta.create_all()
+        con.execute(tab.insert().values((1, "a")))
+        result = con.execute(select([tab.c.column_b])).fetchall()
+
+        html_form = HtmlForm(id_html='form_id')
+        rc: ResultChoice = html_form.result_choice(content=result, listing_index='not_there')
+        assert "column_b" in str(rc)
+
+
 
 
 if __name__ == '__main__':

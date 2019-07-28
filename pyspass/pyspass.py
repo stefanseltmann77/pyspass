@@ -248,7 +248,13 @@ class ResultListing(HtmlContainer):
                     if rownum < rowcount_max:  # limitation of displayed rows
                         tablerow = tab.tr()
                         for key in self.columns_display:
-                            tablerow.td(str(row.get(key, '')))
+                            try:
+                                tablerow.td(str(row.get(key, '')))
+                            except AttributeError:
+                                try:
+                                    tablerow.td(str(row[key]))
+                                except KeyError:
+                                    tablerow.td("")
                     else:
                         break
             if alignments:
@@ -259,10 +265,12 @@ class ResultListing(HtmlContainer):
     def _derive_columnnames_for_display(self) -> list:
         if isinstance(self.content, dict):
             content_keys_data = self.content.keys()
-        elif isinstance(self.content[0], dict):  # default
-            content_keys_data = self.content[0].keys()
         else:
-            raise NotImplementedError()
+            try:
+                content_keys_data = self.content[0].keys()
+
+            except:
+                raise NotImplementedError()
         if self.mapping:
             if not self.show_all:
                 content_keys = [key for key in self.mapping if key in content_keys_data]
