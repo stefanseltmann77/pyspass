@@ -15,13 +15,14 @@ class HtmlObject(metaclass=ABCMeta):
                      'c': 'center',
                      'center': 'center'}
 
+    root_app: 'PySpassApp' = None
+    parent: 'HtmlObject' = None
+
     def __init__(self, id_html: str = None, class_html: str = None):
         self.tag_content: dict = {}
         self.css_styles: dict = {}
         self.id_html: str = id_html
         self.class_html: str = class_html
-        self.root_app: PySpassApp = None
-        self.parent: HtmlContainer = None
         self.indents: int = 0
         if self.id_html:
             self.tag_content['id'] = self.id_html  # TODO hide in setter
@@ -181,7 +182,7 @@ class HtmlContainer(HtmlObject, list, metaclass=ABCMeta):
             self.tag_content['style'] = css_styles_str
         tag_content_str = ' '.join([f'{key}="{value}"' for key, value in self.tag_content.items()])
         return f"<{self.TAG}{' ' + tag_content_str if tag_content_str else ''}>" \
-            f"\n{''.join([str(child) for child in self])}\n</{self.TAG}>\n"
+               f"\n{''.join([str(child) for child in self])}\n</{self.TAG}>\n"
 
 
 class HtmlTable(HtmlContainer):
@@ -436,7 +437,7 @@ class HtmlPage:
         return "</?xml version=\"1.0\" encoding=\"utf-8\" ?>\n" \
                "<!DOCTYPE html>\n" \
                "<html xmlns=\"http://www.w3.org/1999/xhtml\"" \
-            f"xml:lang=\"de\" lang=\"de\">\n{self.head}\n{self.body}\n</html>\n"
+               f"xml:lang=\"de\" lang=\"de\">\n{self.head}\n{self.body}\n</html>\n"
 
 
 class HtmlBody(HtmlContainer):
@@ -632,7 +633,7 @@ class HtmlTextInput(HtmlInput):
 
 
 class HtmlPassword(HtmlInput):
-    def __init__(self, name: str, var_input=None, size=20):
+    def __init__(self, name: str, var_input=None, size: int = 20):
         super().__init__()
         self.tag_content = {'type': 'password',
                             'name': name,
