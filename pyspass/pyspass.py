@@ -1,11 +1,11 @@
-from abc import ABCMeta
+from abc import ABC
 from abc import abstractmethod
 from logging import Logger
 from logging import getLogger
 from typing import Dict, List, Optional, Union, Tuple
 
 
-class HtmlObject(metaclass=ABCMeta):
+class HtmlObject(ABC):
     TAG: str
 
     ALIGNMENT_MAP = {'r': 'right',
@@ -15,14 +15,19 @@ class HtmlObject(metaclass=ABCMeta):
                      'c': 'center',
                      'center': 'center'}
 
-    root_app: 'PySpassApp' = None
-    parent: 'HtmlObject' = None
+    root_app: Optional['PySpassApp'] = None
+    parent: Optional['HtmlObject'] = None
+
+    tag_content: Dict
+    css_styles: Dict
+    id_html: Optional[str]
+    class_html: Optional[str]
 
     def __init__(self, id_html: str = None, class_html: str = None):
         self.tag_content: dict = {}
         self.css_styles: dict = {}
-        self.id_html: str = id_html
-        self.class_html: str = class_html
+        self.id_html = id_html
+        self.class_html = class_html
         self.indents: int = 0
         if self.id_html:
             self.tag_content['id'] = self.id_html  # TODO hide in setter
@@ -48,7 +53,7 @@ class HtmlObject(metaclass=ABCMeta):
         return parent_form
 
 
-class HtmlContainer(HtmlObject, list, metaclass=ABCMeta):
+class HtmlContainer(HtmlObject, list, ABC):
     def add(self, content: Union[HtmlObject, str, int]) -> HtmlObject:
         self.append(content)
         if isinstance(content, HtmlObject):
@@ -144,7 +149,14 @@ class HtmlContainer(HtmlObject, list, metaclass=ABCMeta):
             self.add(label)
         return chkbx
 
-    def script(self, content: str = None, src: str = None, script_type: str = None):
+    def script(self, content: str = None, src: str = None, script_type: str = None) -> 'HtmlScript':
+        """Register a script file for the header
+
+        :param content: TODO
+        :param src: path to the file for the src tag
+        :param script_type: TODO
+        :return: HtmlScript
+        """
         script = HtmlScript(content=content, src=src, script_type=script_type)
         self.add(script)
         return script
@@ -447,7 +459,14 @@ class HtmlBody(HtmlContainer):
 class HtmlHead(HtmlContainer):
     TAG: str = 'head'
 
-    def resourcelink(self, rel: str, linktype: str, href: str):
+    def resourcelink(self, rel: str, linktype: str, href: str) -> 'HtmlResource':
+        """Add a link pointing to a resource for the header
+
+        :param rel: which type of resource, e.g. "stylesheet"
+        :param linktype: e.g. "text/css"
+        :param href: path to file
+        :return: HtmlResource
+        """
         link = HtmlResource(rel=rel, linktype=linktype, href=href)
         self.add(link)
         return link
@@ -778,13 +797,15 @@ class HtmlRow(HtmlContainer):
     """Object for standard HTML row"""
     TAG: str = 'tr'
 
-    def td(self, content=None) -> Union[HtmlObject, HtmlCell]:
+    def td(self, content: Optional[str] = None) -> Union[HtmlObject, HtmlCell]:
         return self.add(HtmlCell(content))
 
     def th(self, content: Union[str, List[str], Tuple[str]] = None) -> \
             Union[Union[HtmlCell, HtmlObject], Union[List[HtmlCell], List[HtmlObject]]]:
         """Create and add a new header cell object
 
+        It is possible to pass along a list of objects or strings. This is sensible especially if you want to
+        fill a row in a single path, e.g. header rows.
         :param content: May be the string contained in the cell or an object or a list of both
         :return: Returns the created cell or list of cells
         """
@@ -795,7 +816,7 @@ class HtmlRow(HtmlContainer):
 
 
 class PySpassStorage:
-    storage_object = None
+    storage_object: Dict
 
     def get(self, field: str, default=None, noentry=None) -> str:
         value = self.storage_object.get(field, default)
@@ -848,7 +869,7 @@ class PySpassSession(PySpassStorage):
         self.storage_object[key] = value
 
 
-class PySpassApp(metaclass=ABCMeta):
+class PySpassApp(ABC):
     app_name: str
     logger: Logger = getLogger(__name__)
     page: HtmlPage
@@ -868,7 +889,7 @@ class PySpassApp(metaclass=ABCMeta):
     def setup_page(self):
         self.logger.info("Setup page root")
         self.page = HtmlPage()
-        self.page.head.script(src='static/spass_forms.js')
+        self.page.head.script(src='static/spass_forms.js')  # Fixme, make folder programatic
 
     def display_login_form(self):
         self.logger.info("Display login form")
