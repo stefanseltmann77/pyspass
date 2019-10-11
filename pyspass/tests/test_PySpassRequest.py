@@ -1,42 +1,45 @@
-import unittest
-from unittest import TestCase
 import flask
+import pytest
+
 from pyspass import PySpassRequest
 
 
-class TestPySpassRequest(TestCase):
+@pytest.fixture()
+def flask_app():
+    app = flask.Flask(__name__)
+    app.testing = True
+    return app.test_client()
 
-    def setUp(self):
-        app = flask.Flask(__name__)
-        app.testing = True
-        self.app = app.test_client()
-        self.request = PySpassRequest(flask.request, framework="flask")
+
+@pytest.fixture()
+def requ():
+    return PySpassRequest(flask.request, framework="flask")
+
+
+class TestPySpassRequest:
 
     def test_init_for_flask(self):
-        self.request = PySpassRequest(flask.request, framework="flask")
+        requ = PySpassRequest(flask.request, framework="flask")
+        assert requ
 
     def test_init_for_wrong_framework(self):
-        with self.assertRaises(NotImplementedError):
+        with pytest.raises(NotImplementedError):
             PySpassRequest(flask.request, framework="ABC")
 
-    def test_access_to_missing_content(self):
+    def test_access_to_missing_content(self, flask_app, requ):
         """Empty string, if not in request obj"""
-        with self.app as c:
+        with flask_app as c:
             c.post("abc=abc")
-            self.assertEqual(self.request.get("not_there"), '')
+            assert requ.get("not_there") == ''
 
-    def test_access_to_missing_content_as_int(self):
+    def test_access_to_missing_content_as_int(self, flask_app, requ):
         """None, if not in request obj"""
-        with self.app as c:
+        with flask_app as c:
             c.post("abc=abc")
-            self.assertEqual(self.request.get_int("not_there"), None)
+            assert requ.get_int("not_there") is None
 
-    def test_access_to_missing_content_as_float(self):
+    def test_access_to_missing_content_as_float(self, flask_app, requ):
         """None, if not in request obj"""
-        with self.app as c:
+        with flask_app as c:
             c.post("abc=abc")
-            self.assertEqual(self.request.get_float("not_there"), None)
-
-
-if __name__ == '__main__':
-    unittest.main()
+            assert requ.get_float("not_there") is None

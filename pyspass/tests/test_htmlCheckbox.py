@@ -1,19 +1,9 @@
-import unittest
-from unittest import TestCase
-
-from pyspass import HtmlCheckbox, HtmlDiv
+from pyspass import HtmlDiv
 
 
-class TestHtmlCheckbox(TestCase):
-
-    def setUp(self):
-        pass
+class TestHtmlCheckbox:
 
     def test_checkbox_without_minimum_params(self):
         div = HtmlDiv()
         div.checkbox(name="check_test", value=1, label='label')
-        self.assertIn('<input type="checkbox" name="check_test" value="1"/>', str(div))
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert '<input type="checkbox" name="check_test" value="1"/>' in str(div)

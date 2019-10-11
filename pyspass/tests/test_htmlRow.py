@@ -1,6 +1,3 @@
-import unittest
-from unittest import TestCase
-
 from pyspass import HtmlRow, HtmlCell
 
 
@@ -27,6 +24,3 @@ class TestHtmlLabel:
         assert isinstance(cell, HtmlCell)
         assert str(cell).startswith("<th>")
         assert str(cell).strip().endswith("</th>")
-
-
-

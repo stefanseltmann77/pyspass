@@ -1,19 +1,9 @@
-import unittest
-from unittest import TestCase
-
 from pyspass import HtmlDiv
 
 
-class TestHtmlLabel(TestCase):
-
-    def setUp(self):
-        pass
+class TestHtmlLabel:
 
     def test_rendering_with_forid(self):
         div = HtmlDiv()
         div.label(content="test", for_id="input_id")
-        self.assertIn('<label for="input_id">test</label>', str(div).replace("\n", ""))
-
-
-if __name__ == '__main__':
-    unittest.main()
+        assert '<label for="input_id">test</label>' in str(div).replace("\n", "")
