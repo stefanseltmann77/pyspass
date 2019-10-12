@@ -60,3 +60,9 @@ class TestHtmlObjects:
         div_2sub = div_1sub.div()
         div_3sub = div_2sub.div()
         assert div_3sub.get_form() == form
+
+    def test_indents(self):
+        div = HtmlDiv()
+        div2 = HtmlDiv()
+        div.add(div2)
+        print(div)

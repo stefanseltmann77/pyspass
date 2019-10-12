@@ -6,6 +6,8 @@ from typing import Dict, List, Optional, Union, Tuple
 
 
 class HtmlObject(ABC):
+    """Abstract parent object for all HTML elements"""
+    #: The string used within the html tags. E.g. "br" or "div" ...
     TAG: str
 
     ALIGNMENT_MAP = {'r': 'right',
@@ -18,10 +20,16 @@ class HtmlObject(ABC):
     root_app: Optional['PySpassApp'] = None
     parent: Optional['HtmlObject'] = None
 
+    #: All elements included in the html tag in form of a dict
     tag_content: Dict
+    #: All css styles included in the html tag in form of a dict
     css_styles: Dict
+    #: Html id to be inserted in tag
     id_html: Optional[str]
+    #: Html class to be inserted in tag
     class_html: Optional[str]
+    #: Depth of indentation for nicely formatted html
+    indents: int = 0
 
     def __init__(self, id_html: str = None, class_html: str = None):
         self.tag_content: dict = {}
@@ -29,15 +37,31 @@ class HtmlObject(ABC):
         self.id_html = id_html
         self.class_html = class_html
         self.indents: int = 0
-        if self.id_html:
-            self.tag_content['id'] = self.id_html  # TODO hide in setter
-        if self.class_html:
-            self.tag_content['class'] = self.class_html  # TODO hide in setter
 
-    def get_form(self) -> Union['HtmlForm', None]:
-        """recursive search for parent form
+    @property
+    def id_html(self):
+        return self._id_html
 
-        Raise error if nested form is detected
+    @id_html.setter
+    def id_html(self, value):
+        self._id_html = value
+        if value:
+            self.tag_content['id'] = value
+
+    @property
+    def class_html(self):
+        return self._class_html
+
+    @class_html.setter
+    def class_html(self, value):
+        self._class_html = value
+        if value:
+            self.tag_content['class'] = value
+
+    def get_form(self) -> Optional['HtmlForm']:
+        """Recursive search for parent form, if exsiting
+
+        Raise error if nested form is detected.
         """
         if not self.parent:
             parent_form = None
@@ -48,16 +72,28 @@ class HtmlObject(ABC):
                 parent_form = self.parent.get_form()
             if parent_form and (parent_form.get_form() or
                                 isinstance(self, HtmlForm)):
-                debug_str = parent_form.get_form().id_html if parent_form.get_form() else self.id_html
+                super_parent_form: HtmlForm = parent_form.get_form()
+                debug_str = super_parent_form.id_html if super_parent_form else self.id_html
                 raise Exception(f"Nested forms detected! {parent_form.id_html} within {debug_str}.")
         return parent_form
 
 
 class HtmlContainer(HtmlObject, list, ABC):
+    """Abstract Html object for all Html objects that are container for further elements. E.g. div, p, form ..."""
+
     def add(self, content: Union[HtmlObject, str, int]) -> HtmlObject:
+        """Add and register an element to the container
+
+        Adding an element will set this object as the parent object and increase the indent counter.
+        If the element is a valid HtmlObject, this new child will be returned for further processing.
+        If the element is a string, then this parent object will be returned instead.
+
+        :param content: The content to be inserted into the container.
+        """
         self.append(content)
         if isinstance(content, HtmlObject):
             content.parent = self
+            content.indents += 1
             return content
         else:
             return self
@@ -71,19 +107,18 @@ class HtmlContainer(HtmlObject, list, ABC):
         self.append('<hr />\n')
         return self
 
-    def div(self, content=None, id_html: str = None):
-        print()
-        div = HtmlDiv(content, id_html)
+    def div(self, content=None, id_html: str = None, class_html: str = None):
+        div = HtmlDiv(content, id_html=id_html, class_html=class_html)
         self.add(div)
         return div
 
-    def p(self, content=None, id_html: str = None):
-        p = HtmlP(content, id_html)
+    def p(self, content=None, id_html: str = None, class_html: str = None):
+        p = HtmlP(content, id_html=id_html, class_html=class_html)
         self.add(p)
         return p
 
-    def span(self, content=None, id_html: str = None):
-        span = HtmlSpan(content, id_html)
+    def span(self, content=None, id_html: str = None, class_html: str = None):
+        span = HtmlSpan(content, id_html=id_html, class_html=class_html)
         self.add(span)
         return span
 
@@ -127,12 +162,12 @@ class HtmlContainer(HtmlObject, list, ABC):
         self.add(hidden)
         return hidden
 
-    def submit(self, name: str, value=None, id_html: str = None, class_html=None) -> 'HtmlSubmit':
+    def submit(self, name: str, value=None, id_html: str = None, class_html: str = None) -> 'HtmlSubmit':
         sub = HtmlSubmit(name=name, value=value, id_html=id_html, class_html=class_html)
         self.add(sub)
         return sub
 
-    def button(self, name: str, value=None, id_html: str = None, class_html=None):
+    def button(self, name: str, value=None, id_html: str = None, class_html: str = None):
         sub = HtmlButton(name=name, value=value, id_html=id_html, class_html=class_html)
         self.add(sub)
         return sub
@@ -216,6 +251,12 @@ class HtmlTable(HtmlContainer):
         return row
 
     def set_column_alignments(self, alignments: str):
+        """Specify the alignemnts for contents in each column
+
+        The alignments are given as a simple string with either c for center, l for left or r for right.
+        :param alignments: A string containing the alignments, e.g. "clr"
+        :return: None
+        """
         for row in self:
             for i, alignment in enumerate(alignments):
                 if i < len(row):
@@ -225,18 +266,33 @@ class HtmlTable(HtmlContainer):
 
 
 class ResultListing(HtmlContainer):
-    """Display object that renders as tabular dataset (nested list) as a html table."""
+    """Display object that renders a tabular dataset (nested list) as a html table.
+
+    :param content: a list like object to be displayed as a table
+    :param mapping: a map of column names in the content to displayed
+    :param show_all:
+    :param rowcount_max:
+    :param alignments:
+
+    """
 
     table: HtmlTable
 
-    def __init__(self, content: list, mapping=None, show_all: bool = False, rowcount_max: int = 200,
+    def __init__(self, content: List, mapping=None, show_all: bool = False, rowcount_max: int = 200,
                  alignments=None):
+        """
+
+        :param content:
+        :param show_all:
+        :param rowcount_max:
+        :param alignments:
+        """
         super().__init__()
         self.show_all = show_all
-        self.content: list = content
+        self.content: List = content
         self.mapping = mapping
         self.rowcount_max: int = rowcount_max
-        self.columns_display: list = []
+        self.columns_display: List = []
 
         tab = super().table()
         self.table = tab
@@ -311,6 +367,9 @@ class ResultChoice(ResultListing):
     PREFIX: str = '_rct_selected_'
 
     _index: Tuple = None
+    _row_selected: Dict
+
+    columns_config: Dict[str, any]
 
     def __init__(self, content: list, listing_index: str, row_selected: Union[str, Dict],
                  mapping: Dict[str, str] = None, show_all: bool = False, rowcount_max: int = 200, alignments=None):
@@ -325,10 +384,20 @@ class ResultChoice(ResultListing):
         :param alignments:
         """
         super().__init__(content, mapping, show_all, rowcount_max, alignments)
-        self.row_selected = row_selected or {}
         self.listing_index = listing_index
-        self.columns_config: dict = {}
-        self.columns_with_mappings: list = []
+        self.row_selected = row_selected
+        self.columns_config: Dict[str, any] = {}
+        self.columns_with_mappings: List = []
+
+    @property
+    def row_selected(self):
+        return self._row_selected
+
+    @row_selected.setter
+    def row_selected(self, value):
+        # either use a dictionary or set the given value as a dict.
+        self._row_selected = None if not value else \
+            value if isinstance(value, dict) else {self._index[0]: value}
 
     @property
     def listing_index(self):
@@ -339,42 +408,45 @@ class ResultChoice(ResultListing):
         self._index = value if not isinstance(value, str) else (value,)
 
     def compose(self):
-        parent_form = self.get_form()
+        parent_form: Optional[HtmlForm] = self.get_form()
         if not isinstance(parent_form, HtmlForm):
             raise Exception('ResultChoices have to be direct or indirect children of a form with an unique ID!')
         id_html_parentform: str = parent_form.id_html
         if not id_html_parentform:
             raise Exception("Only works if parent form has unique ID")
-        # FIXME: doesn't have to be parents
-        content = self.content or []
-        if len(content) > 0:  # FIXME test an rewrite without >0
+        if self.content:
             for index_col in self._index:
-                if index_col not in content[0]:  # todo rewrite with sets, rewrite with any or all
+                if index_col not in self.content[0]:  # TODO  rewrite with sets, rewrite with any or all
+                    # (check if all have to apply)
                     raise Exception(
-                        f"Listing_index '{index_col}' not in list content ({list(content[0].keys())})!")
-        for i, row_dat in enumerate(content):  # TODO or list somewhere else
-            if i < self.rowcount_max:
-                row: HtmlRow = self.table[i + 1]  # +1 for header
-                json = ",".join(f"'{index_col}':'{row_dat[index_col]}'" for index_col in self._index)
-                row.tag_content["onclick"] = f"entryChoiceSetSelection('{id_html_parentform}', {{{json}}});"
-                if isinstance(self.row_selected, str) and str(row_dat[self._index[0]]) == str(self.row_selected):
-                    # simple input for one column index
-                    # todo put string in setter
-                    # FIXME put selected row in dictionary
-                    self._build_selected_row(row)
-                elif not isinstance(self.row_selected, (str, int)) and \
-                        all(str(row_dat[index_col]) == str(self.row_selected.get(index_col))
-                            for index_col in self._index):
-                    self._build_selected_row(row)
-                if self.columns_with_mappings:
-                    for column_name in self.columns_with_mappings:
-                        column_index = self.columns_display.index(column_name)
-                        row[column_index][0] = self.columns_config[column_name]['codes'].get(row[column_index][0],
-                                                                                             row[column_index][0])
-            else:
-                break
-        for index_col in self._index:
-            self.hidden(name=self.PREFIX + index_col, value=self.row_selected, id_html=self.PREFIX + index_col)
+                        f"Listing_index '{index_col}' not in list content ({list(self.content[0].keys())})!")
+            for i, row_dat in enumerate(self.content):
+                if i < self.rowcount_max:
+                    row: HtmlRow = self.table[i + 1]  # +1 for header
+                    json = ",".join(f"'{index_col}':'{row_dat[index_col]}'" for index_col in self._index)
+                    row.tag_content["onclick"] = f"entryChoiceSetSelection('{id_html_parentform}', {{{json}}});"
+                    if self.row_selected:
+                        if isinstance(self.row_selected, str) \
+                                and str(row_dat[self._index[0]]) == str(self.row_selected):
+                            # simple input for one column index
+                            # todo put string in setter
+                            # FIXME put selected row in dictionary
+                            self._build_selected_row(row)
+                        elif not isinstance(self.row_selected, (str, int)) and \
+                                all(str(row_dat[index_col]) == str(self.row_selected.get(index_col))
+                                    for index_col in self._index):
+                            self._build_selected_row(row)
+                    if self.columns_with_mappings:
+                        for column_name in self.columns_with_mappings:
+                            column_index = self.columns_display.index(column_name)
+                            row[column_index][0] = self.columns_config[column_name]['codes'].get(row[column_index][0],
+                                                                                                 row[column_index][0])
+                else:
+                    break
+            for index_col in self._index:
+                self.hidden(name=self.PREFIX + index_col,
+                            value=self.row_selected[index_col] if self.row_selected else None,
+                            id_html=self.PREFIX + index_col)
 
     def _build_selected_row(self, row):
         row.css_styles['color'] = 'white'
@@ -510,8 +582,8 @@ class HtmlH3(HtmlH1):
 class HtmlP(HtmlContainer):
     TAG: str = 'p'
 
-    def __init__(self, content=None, id_html: str = None):
-        super().__init__(id_html=id_html)
+    def __init__(self, content=None, id_html: str = None, class_html: str = None):
+        super().__init__(id_html=id_html, class_html=class_html)
         if content:
             self.append(content)
 
@@ -556,25 +628,21 @@ class HtmlResource(HtmlContainer):
 class HtmlSpan(HtmlContainer):
     TAG: str = 'span'
 
-    def __init__(self, content=None, id_html: str = None):
-        super().__init__()
+    def __init__(self, content=None, id_html: str = None, class_html: str = None):
+        super().__init__(id_html=id_html, class_html=class_html)
         if content:
             self.append(content)
         if id_html:
-            self.id_html = id_html
             self.tag_content['id'] = id_html  # Fixme hide in setter
 
 
 class HtmlDiv(HtmlContainer):
     TAG: str = 'div'
 
-    def __init__(self, content=None, id_html: str = None):
-        super().__init__()
+    def __init__(self, content=None, id_html: str = None, class_html: str = None):
+        super().__init__(id_html=id_html, class_html=class_html)
         if content:
             self.append(content)
-        if id_html:
-            self.id_html = id_html
-            self.tag_content['id'] = id_html  # Fixme hide in setter
 
 
 class HtmlForm(HtmlDiv):
@@ -600,40 +668,28 @@ class HtmlScript(HtmlContainer):
 
 class HtmlHidden(HtmlInput):
     def __init__(self, name: str, value: str = None, id_html: str = None):
-        super().__init__()
+        super().__init__(id_html=id_html)
         self.tag_content['type'] = 'hidden'
         self.tag_content['name'] = name
         if value:
             self.tag_content['value'] = value
-        if id_html:
-            self.tag_content['id'] = id_html
-
 
 class HtmlSubmit(HtmlInput):
     def __init__(self, name, value=None, id_html: str = None, class_html=None):  # FIXME use parameter
-        super().__init__()
+        super().__init__(id_html=id_html, class_html=class_html)
         self.tag_content = {'type': 'submit',
                             'name': name}
         if value:
             self.tag_content['value'] = value
-        if id_html:
-            self.tag_content['id'] = id_html
-        if class_html:
-            self.tag_content['class'] = class_html
 
 
 class HtmlButton(HtmlInput):
     def __init__(self, name: str, value=None, id_html: str = None, class_html=None):  # FIXME use parameter
-        super().__init__()
+        super().__init__(id_html=id_html, class_html=class_html)
         self.tag_content = {'type': 'button',
                             'name': name}
         if value:
             self.tag_content['value'] = value
-        if id_html:
-            self.tag_content['id'] = id_html
-        if class_html:
-            self.tag_content['class'] = class_html
-
 
 class HtmlTextInput(HtmlInput):
     def __init__(self, name: str, var_input=None, size: int = 20, alignment: str = None):
@@ -671,7 +727,6 @@ class HtmlTextArea(HtmlInput):
                             'cols': cols,
                             'rows': rows,
                             'id': name}
-        print(self.parent)
         self.var_input: str = var_input
 
     def __str__(self):
@@ -703,7 +758,9 @@ class HtmlCheckbox(HtmlInput):
 
 class HtmlSelect(HtmlInput):
     TAG: str = "select"
+    #: default code used for "no entry"-code
     _missing_code_id = -1
+    #: default label used for "no entry"-code
     _missing_code_label = 'No Entry'
 
     codes_source: dict = None
@@ -750,7 +807,6 @@ class HtmlSelect(HtmlInput):
             self.tag_content['name'] += '[]'
             self.tag_content['size'] = self.size
         tag_content_str = ' '.join([f'{key}="{value}"' for key, value in self.tag_content.items()])
-
         codes_source_actual = self.codes_source if not self.missing_allowed else \
             {**{self._missing_code_id: self._missing_code_label}, **self.codes_source}
 
