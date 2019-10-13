@@ -1,2 +1,4 @@
 /.idea
 local.py
+/doc/build/
+/.mypy_cache/
