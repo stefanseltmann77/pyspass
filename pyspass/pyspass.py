@@ -2,7 +2,7 @@ from abc import ABC
 from abc import abstractmethod
 from logging import Logger
 from logging import getLogger
-from typing import Dict, List, Optional, Union, Tuple
+from typing import Dict, List, Optional, Union, Tuple, Iterator
 
 
 class HtmlObject(ABC):
@@ -147,7 +147,7 @@ class HtmlContainer(HtmlObject, list, ABC):
         self.add(h3)
         return h3
 
-    def link(self, content=None):
+    def link(self, content=None, href: str = None, target: str = "_blank"):
         link = HtmlLink(**{key: value for key, value in locals().items() if key not in 'self'})
         self.add(link)
         return link
@@ -174,6 +174,11 @@ class HtmlContainer(HtmlObject, list, ABC):
 
     def checkbox(self, name, value=1, label=None, var_input: Union[int, str] = None, autosubmit: bool = False,
                  id_html: str = None, class_html: str = None, label_trailing: bool = True):
+        """
+
+        :param label_trailing: If true, the label will be added after the checkbos. If false, the label comes first.
+        :return:
+        """
         chkbx = HtmlCheckbox(name=name, value=value, var_input=var_input, autosubmit=autosubmit,
                              id_html=id_html, class_html=class_html)
         label = HtmlLabel(content=label, for_id=id_html)
@@ -200,7 +205,7 @@ class HtmlContainer(HtmlObject, list, ABC):
                  missing_allowed: bool = True, multiple: bool = False, size: int = 1, optgroups: dict = None):
         return self.add(HtmlSelect(**{key: value for key, value in locals().items() if key not in 'self'}))
 
-    def textinput(self, name, var_input=None, size: int = 20, alignment: str = None):
+    def textinput(self, name, var_input=None, size: int = 20, alignment: str = None, class_html: str = None):
         return self.add(HtmlTextInput(**{key: value for key, value in locals().items() if key not in 'self'}))
 
     def password(self, name, var_input=None, size: int = 20):
@@ -232,6 +237,46 @@ class HtmlContainer(HtmlObject, list, ABC):
                f"\n{''.join([str(child) for child in self])}\n</{self.TAG}>\n"
 
 
+class HtmlCell(HtmlContainer):
+    TAG: str = 'td'
+
+    def __init__(self, content=None):
+        super().__init__()
+        if content:
+            self.append(content)
+
+
+class HtmlHeadCell(HtmlCell):
+    TAG: str = 'th'
+
+
+class HtmlRow(HtmlContainer):
+    """Object for standard HTML row"""
+    TAG: str = 'tr'
+
+    def td(self, content: Optional[str] = None) -> Union[HtmlObject, HtmlCell]:
+        """Returns the cell, if a string is supplied, but an object, if an object is added"""
+        return self.add(HtmlCell(content))
+
+    def th(self, content: Union[str, List[str], Tuple[str]] = None) -> \
+            Union[Union[HtmlCell, HtmlObject], Union[List[HtmlCell], List[HtmlObject]]]:
+        """Create and add a new header cell object
+
+        It is possible to pass along a list of objects or strings. This is sensible especially if you want to
+        fill a row in a single path, e.g. header rows.
+        :param content: May be the string contained in the cell or an object or a list of both
+        :return: Returns the created cell or list of cells
+        """
+        if isinstance(content, list) or isinstance(content, tuple):
+            return [self.add(HtmlHeadCell(content_piece)) for content_piece in content]
+        else:
+            return self.add(HtmlHeadCell(content))
+
+    @property
+    def cells(self) -> List[HtmlCell]:
+        return self
+
+
 class HtmlTable(HtmlContainer):
     TAG: str = 'table'
 
@@ -242,8 +287,20 @@ class HtmlTable(HtmlContainer):
         self._column_alignments = None
 
     def __str__(self):
+        if self.css_styles:
+            css_styles_str = ';'.join([key + ':' + value for key, value in self.css_styles.items()])
+            self.tag_content['style'] = css_styles_str
         tag_content_str = ' '.join([f'{key}="{value}"' for key, value in self.tag_content.items()])
         return f'<{self.TAG} {tag_content_str}>{"".join([str(item) for item in self])}\n</{self.TAG}>\n'
+
+    @property
+    def header(self) -> Optional[HtmlRow]:
+        return self[0] if len(self) > 0 else None
+
+    @property
+    def rows(self) -> Iterator[HtmlRow]:
+        for row in self:
+            yield row
 
     def tr(self):
         row = HtmlRow()
@@ -251,7 +308,7 @@ class HtmlTable(HtmlContainer):
         return row
 
     def set_column_alignments(self, alignments: str):
-        """Specify the alignemnts for contents in each column
+        """Specify the alignments for contents in each column
 
         The alignments are given as a simple string with either c for center, l for left or r for right.
         :param alignments: A string containing the alignments, e.g. "clr"
@@ -259,7 +316,7 @@ class HtmlTable(HtmlContainer):
         """
         for row in self:
             for i, alignment in enumerate(alignments):
-                if i < len(row):
+                if i < len(row):  # FIXME: necessary?
                     row[i].css_styles["text-align"] = self.ALIGNMENT_MAP[alignment]
                 else:
                     break
@@ -371,8 +428,13 @@ class ResultChoice(ResultListing):
 
     columns_config: Dict[str, any]
 
-    def __init__(self, content: list, listing_index: str, row_selected: Union[str, Dict],
-                 mapping: Dict[str, str] = None, show_all: bool = False, rowcount_max: int = 200, alignments=None):
+    def __init__(self, content: List,
+                 listing_index: str,
+                 row_selected: Union[str, Dict],
+                 mapping: Dict[str, str] = None,
+                 show_all: bool = False,
+                 rowcount_max: int = 200,
+                 alignments=None):
         """
 
         :param content:
@@ -531,7 +593,7 @@ class HtmlBody(HtmlContainer):
 class HtmlHead(HtmlContainer):
     TAG: str = 'head'
 
-    def resourcelink(self, rel: str, linktype: str, href: str) -> 'HtmlResource':
+    def resourcelink(self, rel: str, href: str, linktype: str = None) -> 'HtmlResource':
         """Add a link pointing to a resource for the header
 
         :param rel: which type of resource, e.g. "stylesheet"
@@ -622,7 +684,8 @@ class HtmlResource(HtmlContainer):
         super().__init__()
         self.tag_content['href'] = href
         self.tag_content['rel'] = rel
-        self.tag_content['type'] = linktype
+        if linktype:
+            self.tag_content['type'] = linktype
 
 
 class HtmlSpan(HtmlContainer):
@@ -674,30 +737,34 @@ class HtmlHidden(HtmlInput):
         if value:
             self.tag_content['value'] = value
 
+
 class HtmlSubmit(HtmlInput):
-    def __init__(self, name, value=None, id_html: str = None, class_html=None):  # FIXME use parameter
+    def __init__(self, name: str, value=None, id_html: str = None, class_html=None):
         super().__init__(id_html=id_html, class_html=class_html)
-        self.tag_content = {'type': 'submit',
-                            'name': name}
+        self.tag_content.update({'type': 'submit',
+                                 'name': name})
         if value:
             self.tag_content['value'] = value
 
 
 class HtmlButton(HtmlInput):
-    def __init__(self, name: str, value=None, id_html: str = None, class_html=None):  # FIXME use parameter
+    def __init__(self, name: str, value=None, id_html: str = None, class_html=None):
         super().__init__(id_html=id_html, class_html=class_html)
-        self.tag_content = {'type': 'button',
-                            'name': name}
+        self.tag_content.update({'type': 'button',
+                                 'name': name})
         if value:
             self.tag_content['value'] = value
 
+
 class HtmlTextInput(HtmlInput):
-    def __init__(self, name: str, var_input=None, size: int = 20, alignment: str = None):
-        super().__init__()
-        self.tag_content = {'type': 'text',
-                            'name': name,
-                            'size': size,
-                            'id': name}
+    def __init__(self, name: str, var_input=None, size: int = 20,
+                 alignment: Optional[str] = None,
+                 class_html: Optional[str] = None):
+        super().__init__(class_html=class_html)
+        self.tag_content.update({'type': 'text',
+                                 'name': name,
+                                 'size': size,
+                                 'id': name})
         if var_input:
             self.tag_content['value'] = var_input
         if alignment:
@@ -834,41 +901,6 @@ class HtmlSelect(HtmlInput):
                 content.append(option)
         option_str = '\n'.join([str(obt).replace('\n', '') for obt in content])
         return f'<{self.TAG} {tag_content_str}>{option_str}\n</{self.TAG}>\n'
-
-
-class HtmlCell(HtmlContainer):
-    TAG: str = 'td'
-
-    def __init__(self, content=None):
-        super().__init__()
-        if content:
-            self.append(content)
-
-
-class HtmlHeadCell(HtmlCell):
-    TAG: str = 'th'
-
-
-class HtmlRow(HtmlContainer):
-    """Object for standard HTML row"""
-    TAG: str = 'tr'
-
-    def td(self, content: Optional[str] = None) -> Union[HtmlObject, HtmlCell]:
-        return self.add(HtmlCell(content))
-
-    def th(self, content: Union[str, List[str], Tuple[str]] = None) -> \
-            Union[Union[HtmlCell, HtmlObject], Union[List[HtmlCell], List[HtmlObject]]]:
-        """Create and add a new header cell object
-
-        It is possible to pass along a list of objects or strings. This is sensible especially if you want to
-        fill a row in a single path, e.g. header rows.
-        :param content: May be the string contained in the cell or an object or a list of both
-        :return: Returns the created cell or list of cells
-        """
-        if isinstance(content, list) or isinstance(content, tuple):
-            return [self.add(HtmlHeadCell(content_piece)) for content_piece in content]
-        else:
-            return self.add(HtmlHeadCell(content))
 
 
 class PySpassStorage:
