@@ -3,3 +3,4 @@ local.py
 /doc/build/
 /.mypy_cache/
 /pyspass/tests/.pytest_cache
+/pyspass/.mypy_cache/

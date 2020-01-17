@@ -2,7 +2,7 @@ from abc import ABC
 from abc import abstractmethod
 from logging import Logger
 from logging import getLogger
-from typing import Dict, List, Optional, Union, Tuple, Iterator
+from typing import Dict, List, Optional, Union, Tuple, Iterator, Any
 
 
 class HtmlObject(ABC):
@@ -25,9 +25,9 @@ class HtmlObject(ABC):
     #: All css styles included in the html tag in form of a dict
     css_styles: Dict
     #: Html id to be inserted in tag
-    id_html: Optional[str]
+    _id_html: Optional[str]
     #: Html class to be inserted in tag
-    class_html: Optional[str]
+    _class_html: Optional[str]
     #: Depth of indentation for nicely formatted html
     indents: int = 0
 
@@ -72,7 +72,7 @@ class HtmlObject(ABC):
                 parent_form = self.parent.get_form()
             if parent_form and (parent_form.get_form() or
                                 isinstance(self, HtmlForm)):
-                super_parent_form: HtmlForm = parent_form.get_form()
+                super_parent_form: Optional[HtmlForm] = parent_form.get_form()
                 debug_str = super_parent_form.id_html if super_parent_form else self.id_html
                 raise Exception(f"Nested forms detected! {parent_form.id_html} within {debug_str}.")
         return parent_form
@@ -423,10 +423,10 @@ class ResultChoice(ResultListing):
 
     PREFIX: str = '_rct_selected_'
 
-    _index: Tuple = None
+    _index: Tuple
     _row_selected: Dict
 
-    columns_config: Dict[str, any]
+    columns_config: Dict[str, Any]
 
     def __init__(self, content: List,
                  listing_index: str,
@@ -448,7 +448,7 @@ class ResultChoice(ResultListing):
         super().__init__(content, mapping, show_all, rowcount_max, alignments)
         self.listing_index = listing_index
         self.row_selected = row_selected
-        self.columns_config: Dict[str, any] = {}
+        self.columns_config: Dict[str, Any] = {}
         self.columns_with_mappings: List = []
 
     @property
@@ -601,7 +601,7 @@ class HtmlHead(HtmlContainer):
         :param href: path to file
         :return: HtmlResource
         """
-        link = HtmlResource(rel=rel, linktype=linktype, href=href)
+        link = HtmlResource(rel=rel, href=href, linktype=linktype)
         self.add(link)
         return link
 
@@ -680,7 +680,7 @@ class HtmlLink(HtmlContainer):
 class HtmlResource(HtmlContainer):
     TAG: str = 'link'
 
-    def __init__(self, rel: str, linktype: str, href: str):
+    def __init__(self, rel: str, href: str, linktype: str = None):
         super().__init__()
         self.tag_content['href'] = href
         self.tag_content['rel'] = rel
@@ -830,7 +830,7 @@ class HtmlSelect(HtmlInput):
     #: default label used for "no entry"-code
     _missing_code_label = 'No Entry'
 
-    codes_source: dict = None
+    codes_source: Dict[Any, Any]
 
     def __init__(self, name, codes_source: Union[Dict, List], var_input=None, autosubmit: bool = False,
                  missing_allowed: bool = False, multiple: bool = False, size: int = 1, optgroups: dict = None):
@@ -992,7 +992,7 @@ class PySpassApp(ABC):
         password_entry.tag_content['placeholder'] = "password"
         loginform.submit("submit_login", "enter")
 
-    def resolve_login(self):
+    def resolve_login(self) -> bool:
         self.logger.info("Resolving login")
         if self.session.get("success_login"):
             self.logger.debug("Login already established")
