@@ -2,7 +2,7 @@ from abc import ABC
 from abc import abstractmethod
 from logging import Logger
 from logging import getLogger
-from typing import Dict, List, Optional, Union, Tuple, Iterator, Any
+from typing import Dict, List, Optional, Union, Tuple, Iterator, Any, Mapping
 
 
 class HtmlObject(ABC):
@@ -219,7 +219,7 @@ class HtmlContainer(HtmlObject, list, ABC):
         return self.add(ResultListing(**{key: value for key, value in locals().items() if key not in 'self'}))
 
     def result_choice(self, content: list, listing_index: Union[str, tuple, list], row_selected=None,
-                      mapping: Dict[str, str] = None, show_all: bool = False, alignments=None,
+                      mapping: Mapping[str, str] = None, show_all: bool = False, alignments=None,
                       rowcount_max: int = 200) -> Union['ResultChoice', HtmlObject]:
         """Factory function for creation of ResultChoice"""
         return self.add(ResultChoice(**{key: value for key, value in locals().items() if key not in 'self'}))
@@ -351,7 +351,7 @@ class ResultListing(HtmlContainer):
         self.rowcount_max: int = rowcount_max
         self.columns_display: List = []
 
-        tab = super().table()
+        tab: HtmlTable = super().table()
         self.table = tab
         headrow = tab.tr()
         if content:
@@ -423,14 +423,14 @@ class ResultChoice(ResultListing):
 
     PREFIX: str = '_rct_selected_'
 
-    _index: Tuple
+    _index: Tuple[str]
     _row_selected: Dict
 
     columns_config: Dict[str, Any]
 
     def __init__(self, content: List,
-                 listing_index: str,
-                 row_selected: Union[str, Dict],
+                 listing_index: Union[str, Tuple[str]],
+                 row_selected: Union[str, Dict, List[Dict]],
                  mapping: Dict[str, str] = None,
                  show_all: bool = False,
                  rowcount_max: int = 200,
@@ -459,10 +459,11 @@ class ResultChoice(ResultListing):
     def row_selected(self, value):
         # either use a dictionary or set the given value as a dict.
         self._row_selected = None if not value else \
-            value if isinstance(value, dict) else {self._index[0]: value}
+            value if isinstance(value, dict) or isinstance(value, list) \
+                else {self._index[0]: value}
 
     @property
-    def listing_index(self):
+    def listing_index(self) -> Tuple[str]:
         return self._index
 
     @listing_index.setter
@@ -477,7 +478,7 @@ class ResultChoice(ResultListing):
         if not id_html_parentform:
             raise Exception("Only works if parent form has unique ID")
         if self.content:
-            for index_col in self._index:
+            for index_col in self.listing_index:
                 if index_col not in self.content[0]:  # TODO  rewrite with sets, rewrite with any or all
                     # (check if all have to apply)
                     raise Exception(
@@ -485,19 +486,14 @@ class ResultChoice(ResultListing):
             for i, row_dat in enumerate(self.content):
                 if i < self.rowcount_max:
                     row: HtmlRow = self.table[i + 1]  # +1 for header
-                    json = ",".join(f"'{index_col}':'{row_dat[index_col]}'" for index_col in self._index)
-                    row.tag_content["onclick"] = f"entryChoiceSetSelection('{id_html_parentform}', {{{json}}});"
-                    if self.row_selected:
-                        if isinstance(self.row_selected, str) \
-                                and str(row_dat[self._index[0]]) == str(self.row_selected):
-                            # simple input for one column index
-                            # todo put string in setter
-                            # FIXME put selected row in dictionary
-                            self._build_selected_row(row)
-                        elif not isinstance(self.row_selected, (str, int)) and \
-                                all(str(row_dat[index_col]) == str(self.row_selected.get(index_col))
-                                    for index_col in self._index):
-                            self._build_selected_row(row)
+                    if isinstance(self.row_selected, list):
+                        row.tag_content["onclick"] = f"entryMultiChoiceSetSelection('{id_html_parentform}', " \
+                                                     f"'{self._index[0]}', '{row_dat[self._index[0]]}');"
+                    else:
+                        json = ",".join(f"'{index_col}':'{row_dat[index_col]}'" for index_col in self._index)
+                        row.tag_content["onclick"] = f"entryChoiceSetSelection('{id_html_parentform}', {{{json}}});"
+                    if self._is_selected_row(row_dat):
+                        self._build_selected_row(row)
                     if self.columns_with_mappings:
                         for column_name in self.columns_with_mappings:
                             column_index = self.columns_display.index(column_name)
@@ -505,10 +501,36 @@ class ResultChoice(ResultListing):
                                                                                                  row[column_index][0])
                 else:
                     break
-            for index_col in self._index:
+            for index_col in self.listing_index:
+                if self.row_selected:
+                    if isinstance(self.row_selected, List):
+                        post_value = ";".join([row[index_col] for row in self.row_selected])
+                    else:
+                        post_value = self.row_selected[index_col] if self.row_selected else None
+                else:
+                    post_value = None
                 self.hidden(name=self.PREFIX + index_col,
-                            value=self.row_selected[index_col] if self.row_selected else None,
+                            value=post_value,
                             id_html=self.PREFIX + index_col)
+
+    def _is_selected_row(self, row_dat: Mapping[str, Any]) -> bool:
+        if not self.row_selected:
+            return False
+        elif isinstance(self.row_selected, str) \
+                and str(row_dat.get(self.listing_index[0])) == self.row_selected:
+            # simple input for one column index.
+            return True
+        elif isinstance(self.row_selected, list) \
+                and any(all(str(row_dat.get(index_col)) == str(row_sel.get(index_col))
+                            for index_col in self.listing_index)
+                        for row_sel in self.row_selected):
+            return True
+        elif isinstance(self.row_selected, dict) and \
+                all(str(row_dat[index_col]) == str(self.row_selected.get(index_col))
+                    for index_col in self.listing_index):
+            return True
+        else:
+            return False
 
     def _build_selected_row(self, row):
         row.css_styles['color'] = 'white'

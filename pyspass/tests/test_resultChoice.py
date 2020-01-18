@@ -1,5 +1,4 @@
 import pytest
-from sqlalchemy import Table, MetaData, Column, Integer, String, select
 
 from pyspass import HtmlForm, HtmlDiv
 from pyspass import ResultChoice
@@ -62,7 +61,7 @@ class TestResultChoice:
         rl.compose()
         assert 'name="_rct_selected_column_1" value="4"' in str(rl)
 
-    def test_row_selection_with_multible(self, content_as_dicts):
+    def test_row_selection_with_multible_columns(self, content_as_dicts):
         html_form = HtmlForm(id_html='form_id')
         rl = html_form.result_choice(content=content_as_dicts, listing_index=['column_1', 'column_2'],
                                      row_selected={'column_1': 4, 'column_2': 5})
@@ -98,7 +97,53 @@ class TestResultChoice:
             rl.set_codes("column_1", {1: "a", 2: "c"})
             rl.compose()
 
+    def test_select_multiple_rows_at_once(self, content_as_dicts):
+        html_form = HtmlForm(id_html='form_id')
+        rl: ResultChoice = html_form.result_choice(content=content_as_dicts,
+                                                   listing_index='column_1',
+                                                   row_selected=[{'column_1': '4'},
+                                                                 {'column_1': '10'}])
+        rl.compose()
+        assert 'white' in str(rl)
+        assert 'name="_rct_selected_column_1" value="4;10"' in str(rl)
+
+    def test__is_selected_row(self, content_as_dicts):
+        html_form = HtmlForm(id_html='form_id')
+        rl: ResultChoice = html_form.result_choice(content=content_as_dicts,
+                                                   listing_index='column_1',
+                                                   row_selected=[{'column_1': '4'},
+                                                                 {'column_1': '10'}])
+        rl.compose()
+
+        assert rl._is_selected_row({'column_1': '4'})
+        assert rl._is_selected_row({'column_1': '10'})
+        assert not rl._is_selected_row({'column_1': '5'})
+        assert not rl._is_selected_row({'column_2': '4'})
+        assert not rl._is_selected_row({'column_2': '5'})
+
+        # test with list as input
+        rl: ResultChoice = html_form.result_choice(content=content_as_dicts,
+                                                   listing_index=['column_1'],
+                                                   row_selected=[{'column_1': '4'},
+                                                                 {'column_1': '10'}])
+        rl.compose()
+        assert rl._is_selected_row({'column_1': '4'})
+        assert not rl._is_selected_row({'column_1': '5'})
+
+        # test with multiple columns
+        rl: ResultChoice = html_form.result_choice(content=content_as_dicts,
+                                                   listing_index=['column_1', 'column_2'],
+                                                   row_selected=[{'column_1': '4', 'column_2': '5'},
+                                                                 {'column_1': '6', 'column_2': '7'}])
+        rl.compose()
+        assert rl._is_selected_row({'column_1': 4, 'column_2': 5})
+        assert rl._is_selected_row({'column_1': 6, 'column_2': 7})
+        assert not rl._is_selected_row({'column_1': 2, 'column_2': 3})
+        assert not rl._is_selected_row({'column_1': 4, 'column_2': 3})
+        assert not rl._is_selected_row({'column_1': 1, 'column_2': 7})
+
     def test_with_alchemy(self):
+        from sqlalchemy import Table, MetaData, Column, Integer, String, select
         from sqlalchemy import create_engine
         con = create_engine('sqlite://').connect()
         meta = MetaData(bind=con)
