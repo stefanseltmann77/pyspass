@@ -1,8 +1,9 @@
 from abc import ABC
 from abc import abstractmethod
+from enum import Enum
 from logging import Logger
 from logging import getLogger
-from typing import Dict, List, Optional, Union, Tuple, Iterator, Any, Mapping
+from typing import Dict, List, Optional, Union, Iterator, Any, Mapping, Sequence
 
 
 class HtmlObject(ABC):
@@ -81,7 +82,7 @@ class HtmlObject(ABC):
 class HtmlContainer(HtmlObject, list, ABC):
     """Abstract Html object for all Html objects that are container for further elements. E.g. div, p, form ..."""
 
-    def add(self, content: Union[HtmlObject, str, int]) -> HtmlObject:
+    def add(self, content: Union[HtmlObject, str, int, float]) -> HtmlObject:
         """Add and register an element to the container
 
         Adding an element will set this object as the parent object and increase the indent counter.
@@ -162,7 +163,7 @@ class HtmlContainer(HtmlObject, list, ABC):
         self.add(hidden)
         return hidden
 
-    def submit(self, name: str, value=None, id_html: str = None, class_html: str = None) -> 'HtmlSubmit':
+    def submit(self, name: Union[str, Enum], value=None, id_html: str = None, class_html: str = None) -> 'HtmlSubmit':
         sub = HtmlSubmit(name=name, value=value, id_html=id_html, class_html=class_html)
         self.add(sub)
         return sub
@@ -201,7 +202,7 @@ class HtmlContainer(HtmlObject, list, ABC):
         self.add(script)
         return script
 
-    def dropdown(self, name, codes_source: Union[List, Dict], var_input=None, autosubmit: bool = False,
+    def dropdown(self, name, codes_source: Union[Sequence, Mapping], var_input=None, autosubmit: bool = False,
                  missing_allowed: bool = True, multiple: bool = False, size: int = 1, optgroups: dict = None):
         return self.add(HtmlSelect(**{key: value for key, value in locals().items() if key not in 'self'}))
 
@@ -214,17 +215,17 @@ class HtmlContainer(HtmlObject, list, ABC):
     def textarea(self, name, var_input=None, rows: int = 4, cols: int = 50):
         return self.add(HtmlTextArea(**{key: value for key, value in locals().items() if key not in 'self'}))
 
-    def result_listing(self, content: list, mapping=None, show_all: bool = False,
+    def result_listing(self, content: Sequence, mapping=None, show_all: bool = False,
                        alignments=None) -> Union['ResultListing', HtmlObject]:
         return self.add(ResultListing(**{key: value for key, value in locals().items() if key not in 'self'}))
 
-    def result_choice(self, content: list, listing_index: Union[str, tuple, list], row_selected=None,
+    def result_choice(self, content: Sequence, listing_index: Union[str, tuple, list], row_selected=None,
                       mapping: Mapping[str, str] = None, show_all: bool = False, alignments=None,
                       rowcount_max: int = 200) -> Union['ResultChoice', HtmlObject]:
         """Factory function for creation of ResultChoice"""
         return self.add(ResultChoice(**{key: value for key, value in locals().items() if key not in 'self'}))
 
-    def result_editor(self, content: list, listing_index, row_selected=None, mapping=None, show_all: bool = False,
+    def result_editor(self, content: Sequence, listing_index, row_selected=None, mapping=None, show_all: bool = False,
                       rowcount_max: int = 200, columns_protected: list = None, alignments=None):
         return self.add(ResultEditor(**{key: value for key, value in locals().items() if key not in 'self'}))
 
@@ -258,7 +259,7 @@ class HtmlRow(HtmlContainer):
         """Returns the cell, if a string is supplied, but an object, if an object is added"""
         return self.add(HtmlCell(content))
 
-    def th(self, content: Union[str, List[str], Tuple[str]] = None) -> \
+    def th(self, content: Union[str, Sequence[str]] = None) -> \
             Union[Union[HtmlCell, HtmlObject], Union[List[HtmlCell], List[HtmlObject]]]:
         """Create and add a new header cell object
 
@@ -334,9 +335,10 @@ class ResultListing(HtmlContainer):
     """
 
     table: HtmlTable
+    content: Sequence
 
-    def __init__(self, content: List, mapping=None, show_all: bool = False, rowcount_max: int = 200,
-                 alignments=None):
+    def __init__(self, content: Sequence, mapping=None, show_all: bool = False,
+                 rowcount_max: int = 200, alignments=None):
         """
 
         :param content:
@@ -346,7 +348,7 @@ class ResultListing(HtmlContainer):
         """
         super().__init__()
         self.show_all = show_all
-        self.content: List = content
+        self.content = content
         self.mapping = mapping
         self.rowcount_max: int = rowcount_max
         self.columns_display: List = []
@@ -423,15 +425,15 @@ class ResultChoice(ResultListing):
 
     PREFIX: str = '_rct_selected_'
 
-    _index: Tuple[str]
+    _index: Sequence[str]
     _row_selected: Dict
 
     columns_config: Dict[str, Any]
 
-    def __init__(self, content: List,
-                 listing_index: Union[str, Tuple[str]],
-                 row_selected: Union[str, Dict, List[Dict]],
-                 mapping: Dict[str, str] = None,
+    def __init__(self, content: Sequence,
+                 listing_index: Union[str, Sequence[str]],
+                 row_selected: Union[str, Mapping, Sequence[Mapping]],
+                 mapping: Mapping[str, str] = None,
                  show_all: bool = False,
                  rowcount_max: int = 200,
                  alignments=None):
@@ -463,12 +465,12 @@ class ResultChoice(ResultListing):
                 else {self._index[0]: value}
 
     @property
-    def listing_index(self) -> Tuple[str]:
+    def listing_index(self) -> Sequence[str]:
         return self._index
 
     @listing_index.setter
     def listing_index(self, value):
-        self._index = value if not isinstance(value, str) else (value,)
+        self._index = value if not isinstance(value, str) else [value, ]
 
     def compose(self):
         parent_form: Optional[HtmlForm] = self.get_form()
@@ -591,23 +593,6 @@ class ResultEditor(ResultChoice):
         button.tag_content['autofocus'] = 'autofocus'
 
 
-class HtmlPage:
-    body = None
-    head = None
-    root_app = None
-
-    def __init__(self, root_app=None):
-        self.root_app = root_app
-        self.head = HtmlHead()
-        self.body = HtmlBody()
-
-    def render(self):
-        return "</?xml version=\"1.0\" encoding=\"utf-8\" ?>\n" \
-               "<!DOCTYPE html>\n" \
-               "<html xmlns=\"http://www.w3.org/1999/xhtml\"" \
-               f"xml:lang=\"de\" lang=\"de\">\n{self.head}\n{self.body}\n</html>\n"
-
-
 class HtmlBody(HtmlContainer):
     TAG: str = 'body'
 
@@ -626,6 +611,25 @@ class HtmlHead(HtmlContainer):
         link = HtmlResource(rel=rel, href=href, linktype=linktype)
         self.add(link)
         return link
+
+
+class HtmlPage:
+    body: HtmlBody
+    head: HtmlHead
+    root_app = None
+
+    def __init__(self, root_app=None):
+        self.root_app = root_app
+        self.head = HtmlHead()
+        self.body = HtmlBody()
+
+    @property
+    def html(self):
+        return '</?xml version="1.0" encoding="utf-8" ?>\n' \
+               '<!DOCTYPE html>\n' \
+               '<html xmlns="http://www.w3.org/1999/xhtml"' \
+               f'xml:lang="de" lang="de">\n{self.head}\n' \
+               f'{self.body}\n</html>\n'
 
 
 class HtmlOptgroup(HtmlContainer):
@@ -761,7 +765,7 @@ class HtmlHidden(HtmlInput):
 
 
 class HtmlSubmit(HtmlInput):
-    def __init__(self, name: str, value=None, id_html: str = None, class_html=None):
+    def __init__(self, name: Union[str, Enum], value=None, id_html: str = None, class_html=None):
         super().__init__(id_html=id_html, class_html=class_html)
         self.tag_content.update({'type': 'submit',
                                  'name': name})
@@ -854,7 +858,7 @@ class HtmlSelect(HtmlInput):
 
     codes_source: Dict[Any, Any]
 
-    def __init__(self, name, codes_source: Union[Dict, List], var_input=None, autosubmit: bool = False,
+    def __init__(self, name, codes_source: Union[Mapping, Sequence], var_input=None, autosubmit: bool = False,
                  missing_allowed: bool = False, multiple: bool = False, size: int = 1, optgroups: dict = None):
         """Dropdown element.
 
@@ -977,6 +981,14 @@ class PySpassSession(PySpassStorage):
 
     def __setitem__(self, key, value):
         self.storage_object[key] = value
+
+
+class PySpassRenderer:
+    page: HtmlPage
+
+    def __init__(self):
+        self.page = HtmlPage()
+        self.page.head.script(src='static/spass_forms.js')  # Fixme, make folder programatic
 
 
 class PySpassApp(ABC):

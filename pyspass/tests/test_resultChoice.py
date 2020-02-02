@@ -33,7 +33,7 @@ class TestResultChoice:
     def test_setter_listing_index(self, content_as_dicts):
         html_form = HtmlForm(id_html='form_id')
         rl = html_form.result_choice(content=content_as_dicts, listing_index='column_1', row_selected=None)
-        assert rl.listing_index == ('column_1',)
+        assert rl.listing_index == ['column_1', ]
 
     def test_constructor_empty_content(self):
         html_form = HtmlForm(id_html='form_id')
