@@ -4,3 +4,5 @@ local.py
 /.mypy_cache/
 /pyspass/tests/.pytest_cache
 /pyspass/.mypy_cache/
+/pyspass_pkg.egg-info
+/dist

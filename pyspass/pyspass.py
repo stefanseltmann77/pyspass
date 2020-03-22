@@ -527,9 +527,9 @@ class ResultChoice(ResultListing):
                             for index_col in self.listing_index)
                         for row_sel in self.row_selected):
             return True
-        elif isinstance(self.row_selected, dict) and \
-                all(str(row_dat[index_col]) == str(self.row_selected.get(index_col))
-                    for index_col in self.listing_index):
+        elif (isinstance(self.row_selected, dict) and
+              all(str(row_dat[index_col]) == str(self.row_selected.get(index_col))
+                  for index_col in self.listing_index)):
             return True
         else:
             return False
