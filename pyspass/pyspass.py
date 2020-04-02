@@ -473,6 +473,7 @@ class ResultChoice(ResultListing):
         self._index = value if not isinstance(value, str) else [value, ]
 
     def compose(self):
+        """Composes the final html composite object as a final step after all settings have been done."""
         parent_form: Optional[HtmlForm] = self.get_form()
         if not isinstance(parent_form, HtmlForm):
             raise Exception('ResultChoices have to be direct or indirect children of a form with an unique ID!')
@@ -480,6 +481,7 @@ class ResultChoice(ResultListing):
         if not id_html_parentform:
             raise Exception("Only works if parent form has unique ID")
         if self.content:
+            trigger_name = 'trigger_' + (self.id_html if self.id_html else 'result_choice')
             for index_col in self.listing_index:
                 if index_col not in self.content[0]:  # TODO  rewrite with sets, rewrite with any or all
                     # (check if all have to apply)
@@ -493,6 +495,7 @@ class ResultChoice(ResultListing):
                                                      f"'{self._index[0]}', '{row_dat[self._index[0]]}');"
                     else:
                         json = ",".join(f"'{index_col}':'{row_dat[index_col]}'" for index_col in self._index)
+                        json += f",'{trigger_name}':'true'"
                         row.tag_content["onclick"] = f"entryChoiceSetSelection('{id_html_parentform}', {{{json}}});"
                     if self._is_selected_row(row_dat):
                         self._build_selected_row(row)
@@ -514,6 +517,9 @@ class ResultChoice(ResultListing):
                 self.hidden(name=self.PREFIX + index_col,
                             value=post_value,
                             id_html=self.PREFIX + index_col)
+            self.hidden(name=self.PREFIX+trigger_name,
+                        value='false',
+                        id_html=self.PREFIX+trigger_name)
 
     def _is_selected_row(self, row_dat: Mapping[str, Any]) -> bool:
         if not self.row_selected:
