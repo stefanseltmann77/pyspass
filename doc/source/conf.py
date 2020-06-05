@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.abspath(f'..{os.sep}..'))
 # -- Project information -----------------------------------------------------
 
 project = 'PySPASS'
-copyright = '2019, Stefan Seltmann'
+copyright = '2020, Stefan Seltmann'
 author = 'Stefan Seltmann'
 
 # The full version, including alpha/beta/rc tags

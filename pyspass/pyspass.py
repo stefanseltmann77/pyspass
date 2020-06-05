@@ -219,7 +219,7 @@ class HtmlContainer(HtmlObject, list, ABC):
                        alignments=None) -> Union['ResultListing', HtmlObject]:
         return self.add(ResultListing(**{key: value for key, value in locals().items() if key not in 'self'}))
 
-    def result_choice(self, content: Sequence, listing_index: Union[str, tuple, list], row_selected=None,
+    def result_choice(self, content: Sequence, listing_index: Union[str, Sequence], row_selected=None,
                       mapping: Mapping[str, str] = None, show_all: bool = False, alignments=None,
                       rowcount_max: int = 200) -> Union['ResultChoice', HtmlObject]:
         """Factory function for creation of ResultChoice"""
@@ -396,9 +396,8 @@ class ResultListing(HtmlContainer):
         else:
             try:
                 content_keys_data = self.content[0].keys()
-
             except:
-                raise NotImplementedError()
+                raise NotImplementedError(f"No implemented for content type {type(self.content)}")
         if self.mapping:
             if not self.show_all:
                 content_keys = [key for key in self.mapping if key in content_keys_data]
@@ -509,7 +508,7 @@ class ResultChoice(ResultListing):
             for index_col in self.listing_index:
                 if self.row_selected:
                     if isinstance(self.row_selected, List):
-                        post_value = ";".join([row[index_col] for row in self.row_selected])
+                        post_value = ";".join([str(row[index_col]) for row in self.row_selected])
                     else:
                         post_value = self.row_selected[index_col] if self.row_selected else None
                 else:
@@ -517,9 +516,9 @@ class ResultChoice(ResultListing):
                 self.hidden(name=self.PREFIX + index_col,
                             value=post_value,
                             id_html=self.PREFIX + index_col)
-            self.hidden(name=self.PREFIX+trigger_name,
+            self.hidden(name=self.PREFIX + trigger_name,
                         value='false',
-                        id_html=self.PREFIX+trigger_name)
+                        id_html=self.PREFIX + trigger_name)
 
     def _is_selected_row(self, row_dat: Mapping[str, Any]) -> bool:
         if not self.row_selected:
@@ -544,7 +543,8 @@ class ResultChoice(ResultListing):
         row.css_styles['color'] = 'white'
         row.css_styles['background'] = 'grey'
 
-    def set_codes(self, column_name: str, codes: Union[list, dict], multichoice: bool = False, display_size: int = 1):
+    def set_codes(self, column_name: str, codes: Union[Sequence, Mapping],
+                  multichoice: bool = False, display_size: int = 1):
         """Assign a code mapping to a given column name.
 
         Codes/values within the column will be replaced by values from the mapping.
@@ -774,7 +774,7 @@ class HtmlSubmit(HtmlInput):
     def __init__(self, name: Union[str, Enum], value=None, id_html: str = None, class_html=None):
         super().__init__(id_html=id_html, class_html=class_html)
         self.tag_content.update({'type': 'submit',
-                                 'name': name})
+                                 'name': str(name)})
         if value:
             self.tag_content['value'] = value
 
