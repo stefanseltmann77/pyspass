@@ -108,22 +108,22 @@ class HtmlContainer(HtmlObject, list, ABC):
         self.append('<hr />\n')
         return self
 
-    def div(self, content=None, id_html: str = None, class_html: str = None):
+    def div(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
         div = HtmlDiv(content, id_html=id_html, class_html=class_html)
         self.add(div)
         return div
 
-    def p(self, content=None, id_html: str = None, class_html: str = None):
+    def p(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
         p = HtmlP(content, id_html=id_html, class_html=class_html)
         self.add(p)
         return p
 
-    def span(self, content=None, id_html: str = None, class_html: str = None):
+    def span(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
         span = HtmlSpan(content, id_html=id_html, class_html=class_html)
         self.add(span)
         return span
 
-    def form(self, id_html: str = None):
+    def form(self, id_html: Optional[str] = None):
         form = HtmlForm(id_html)
         self.add(form)
         return form
@@ -148,27 +148,28 @@ class HtmlContainer(HtmlObject, list, ABC):
         self.add(h3)
         return h3
 
-    def link(self, content=None, href: str = None, target: str = "_blank"):
+    def link(self, content=None, href: Optional[str] = None, target: str = "_blank"):
         link = HtmlLink(**{key: value for key, value in locals().items() if key not in 'self'})
         self.add(link)
         return link
 
-    def label(self, content: str = None, for_id: str = None) -> 'HtmlLabel':
+    def label(self, content: Optional[str] = None, for_id: Optional[str] = None) -> 'HtmlLabel':
         label = HtmlLabel(content=content, for_id=for_id)
         self.add(label)
         return label
 
-    def hidden(self, name, value=None, id_html: str = None) -> 'HtmlHidden':
+    def hidden(self, name, value=None, id_html: Optional[str] = None) -> 'HtmlHidden':
         hidden = HtmlHidden(name=name, value=value, id_html=id_html)
         self.add(hidden)
         return hidden
 
-    def submit(self, name: Union[str, Enum], value=None, id_html: str = None, class_html: str = None) -> 'HtmlSubmit':
+    def submit(self, name: Union[str, Enum], value=None, id_html: Optional[str] = None,
+               class_html: Optional[str] = None) -> 'HtmlSubmit':
         sub = HtmlSubmit(name=name, value=value, id_html=id_html, class_html=class_html)
         self.add(sub)
         return sub
 
-    def button(self, name: str, value=None, id_html: str = None, class_html: str = None):
+    def button(self, name: str, value=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
         sub = HtmlButton(name=name, value=value, id_html=id_html, class_html=class_html)
         self.add(sub)
         return sub
@@ -190,7 +191,8 @@ class HtmlContainer(HtmlObject, list, ABC):
             self.add(label)
         return chkbx
 
-    def script(self, content: str = None, src: str = None, script_type: str = None) -> 'HtmlScript':
+    def script(self, content: Optional[str] = None, src: Optional[str] = None,
+               script_type: Optional[str] = None) -> 'HtmlScript':
         """Register a script file for the header
 
         :param content: TODO
@@ -206,7 +208,8 @@ class HtmlContainer(HtmlObject, list, ABC):
                  missing_allowed: bool = True, multiple: bool = False, size: int = 1, optgroups: dict = None):
         return self.add(HtmlSelect(**{key: value for key, value in locals().items() if key not in 'self'}))
 
-    def textinput(self, name, var_input=None, size: int = 20, alignment: str = None, class_html: str = None):
+    def textinput(self, name, var_input=None, size: int = 20,
+                  alignment: Optional[str] = None, class_html: Optional[str] = None):
         return self.add(HtmlTextInput(**{key: value for key, value in locals().items() if key not in 'self'}))
 
     def password(self, name, var_input=None, size: int = 20):
@@ -225,7 +228,8 @@ class HtmlContainer(HtmlObject, list, ABC):
         """Factory function for creation of ResultChoice"""
         return self.add(ResultChoice(**{key: value for key, value in locals().items() if key not in 'self'}))
 
-    def result_editor(self, content: Sequence, listing_index, row_selected=None, mapping=None, show_all: bool = False,
+    def result_editor(self, content: Sequence, listing_index, row_selected=None,
+                      mapping: Optional[Mapping[str, str]] = None, show_all: bool = False,
                       rowcount_max: int = 200, columns_protected: list = None, alignments=None):
         return self.add(ResultEditor(**{key: value for key, value in locals().items() if key not in 'self'}))
 
@@ -567,7 +571,8 @@ class ResultChoice(ResultListing):
 
 
 class ResultEditor(ResultChoice):
-    def __init__(self, content: list, listing_index, row_selected, mapping=None, show_all: bool = False,
+    def __init__(self, content: list, listing_index, row_selected, mapping: Optional[Mapping[str, str]] = None,
+                 show_all: bool = False,
                  rowcount_max: int = 200, columns_protected: list = None, alignments=None):
         super().__init__(content=content, listing_index=listing_index, row_selected=row_selected,
                          mapping=mapping, show_all=show_all, rowcount_max=rowcount_max, alignments=alignments)
@@ -676,7 +681,7 @@ class HtmlH3(HtmlH1):
 class HtmlP(HtmlContainer):
     TAG: str = 'p'
 
-    def __init__(self, content=None, id_html: str = None, class_html: str = None):
+    def __init__(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
         super().__init__(id_html=id_html, class_html=class_html)
         if content:
             self.append(content)
@@ -685,7 +690,8 @@ class HtmlP(HtmlContainer):
 class HtmlLabel(HtmlContainer):
     TAG: str = 'label'
 
-    def __init__(self, content: str = None, for_id: str = None, id_html: str = None, class_html: str = None):
+    def __init__(self, content: Optional[str] = None, for_id: Optional[str] = None, id_html: Optional[str] = None,
+                 class_html: Optional[str] = None):
         super().__init__(id_html=id_html, class_html=class_html)
         if content:
             self.append(content)
@@ -696,8 +702,8 @@ class HtmlLabel(HtmlContainer):
 class HtmlLink(HtmlContainer):
     TAG: str = 'a'
 
-    def __init__(self, content: str = None, href: str = None, target: str = "_blank",
-                 id_html: str = None, class_html: str = None):
+    def __init__(self, content: Optional[str] = None, href: Optional[str] = None, target: str = "_blank",
+                 id_html: Optional[str] = None, class_html: Optional[str] = None):
         """
         If content is left empty, href will be taken instead.
         """
@@ -723,7 +729,7 @@ class HtmlResource(HtmlContainer):
 class HtmlSpan(HtmlContainer):
     TAG: str = 'span'
 
-    def __init__(self, content=None, id_html: str = None, class_html: str = None):
+    def __init__(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
         super().__init__(id_html=id_html, class_html=class_html)
         if content:
             self.append(content)
@@ -734,7 +740,7 @@ class HtmlSpan(HtmlContainer):
 class HtmlDiv(HtmlContainer):
     TAG: str = 'div'
 
-    def __init__(self, content=None, id_html: str = None, class_html: str = None):
+    def __init__(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
         super().__init__(id_html=id_html, class_html=class_html)
         if content:
             self.append(content)
@@ -752,7 +758,7 @@ class HtmlForm(HtmlDiv):
 class HtmlScript(HtmlContainer):
     TAG: str = 'script'
 
-    def __init__(self, content: str = None, src: str = None, script_type: str = None):
+    def __init__(self, content: Optional[str] = None, src: Optional[str] = None, script_type: Optional[str] = None):
         super().__init__()
         self.script_type = script_type
         if content:
@@ -762,7 +768,7 @@ class HtmlScript(HtmlContainer):
 
 
 class HtmlHidden(HtmlInput):
-    def __init__(self, name: str, value: str = None, id_html: str = None):
+    def __init__(self, name: str, value: Optional[str] = None, id_html: Optional[str] = None):
         super().__init__(id_html=id_html)
         self.tag_content['type'] = 'hidden'
         self.tag_content['name'] = name
@@ -771,7 +777,8 @@ class HtmlHidden(HtmlInput):
 
 
 class HtmlSubmit(HtmlInput):
-    def __init__(self, name: Union[str, Enum], value=None, id_html: str = None, class_html=None):
+    def __init__(self, name: Union[str, Enum], value=None, id_html: Optional[str] = None,
+                 class_html: Optional[str] = None):
         super().__init__(id_html=id_html, class_html=class_html)
         self.tag_content.update({'type': 'submit',
                                  'name': str(name)})
@@ -780,7 +787,7 @@ class HtmlSubmit(HtmlInput):
 
 
 class HtmlButton(HtmlInput):
-    def __init__(self, name: str, value=None, id_html: str = None, class_html=None):
+    def __init__(self, name: str, value=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
         super().__init__(id_html=id_html, class_html=class_html)
         self.tag_content.update({'type': 'button',
                                  'name': name})
@@ -844,7 +851,7 @@ class HtmlRadio(HtmlInput):
 
 class HtmlCheckbox(HtmlInput):
     def __init__(self, name, value, var_input: Union[int, str] = None, autosubmit: bool = False,
-                 id_html: str = None, class_html: str = None):
+                 id_html: Optional[str] = None, class_html: Optional[str] = None):
         super().__init__(id_html=id_html, class_html=class_html)
         self.tag_content = {'type': 'checkbox',
                             'name': name,
@@ -939,7 +946,7 @@ class PySpassStorage:
     storage_object: Dict
 
     def get(self, field: str, default=None, noentry=None) -> str:
-        value = self.storage_object.get(field, default)
+        value: str = self.storage_object.get(field, default)
         return value if value != noentry else ""
 
 
@@ -953,7 +960,7 @@ class PySpassRequest(PySpassStorage):
             raise NotImplementedError
 
     def get(self, request_field: str, default=None, noentry=None) -> str:
-        value = self.storage_object.form.get(request_field, default)
+        value: str = self.storage_object.form.get(request_field, default)
         return value if value != noentry else ""
 
     def get_tuple(self, *args, default=None, noentry=None):
