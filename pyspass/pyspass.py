@@ -462,8 +462,7 @@ class ResultChoice(ResultListing):
     def row_selected(self, value):
         # either use a dictionary or set the given value as a dict.
         self._row_selected = None if not value else \
-            value if isinstance(value, dict) or isinstance(value, list) \
-                else {self._index[0]: value}
+            value if isinstance(value, dict) or isinstance(value, list) else {self._index[0]: value}
 
     @property
     def listing_index(self) -> Sequence[str]:
@@ -1044,7 +1043,7 @@ class PySpassApp(ABC):
             login_success: bool = False
             if self.request.get("submit_login"):
                 login_success = self.affirm_credentials(self.request.get(self.app_name + "_username_entry"),
-                                                              self.request.get(self.app_name + "_password_entry"))
+                                                        self.request.get(self.app_name + "_password_entry"))
             if login_success:
                 self.session["success_login"] = True
                 self.logger.debug("Login successful")
