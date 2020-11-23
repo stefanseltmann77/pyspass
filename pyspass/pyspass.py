@@ -336,6 +336,7 @@ class ResultListing(HtmlContainer):
 
     table: HtmlTable
     content: Sequence
+    columns_display: Sequence
 
     def __init__(self, content: Sequence, mapping=None, show_all: bool = False,
                  rowcount_max: int = 200, alignments=None):
@@ -351,7 +352,7 @@ class ResultListing(HtmlContainer):
         self.content = content
         self.mapping = mapping
         self.rowcount_max: int = rowcount_max
-        self.columns_display: List = []
+        self.columns_display = []
 
         tab: HtmlTable = super().table()
         self.table = tab
@@ -398,6 +399,7 @@ class ResultListing(HtmlContainer):
                 content_keys_data = self.content[0].keys()
             except:
                 raise NotImplementedError(f"No implemented for content type {type(self.content)}")
+        content_keys: Sequence[Any]
         if self.mapping:
             if not self.show_all:
                 content_keys = [key for key in self.mapping if key in content_keys_data]
@@ -407,8 +409,8 @@ class ResultListing(HtmlContainer):
                     if key not in self.mapping:
                         content_keys.append(key)
         else:
-            content_keys = content_keys_data
-        return list(content_keys)
+            content_keys = list(content_keys_data)
+        return content_keys
 
     def __str__(self):
         # for row in self.table:
@@ -936,9 +938,9 @@ class HtmlSelect(HtmlInput):
 
 
 class PySpassStorage:
-    storage_object: Dict
+    storage_object: Union[Mapping]
 
-    def get(self, field: str, default=None, noentry=None) -> str:
+    def get(self, field: str, default=None, noentry=None) -> Any:
         value = self.storage_object.get(field, default)
         return value if value != noentry else ""
 
@@ -952,7 +954,7 @@ class PySpassRequest(PySpassStorage):
         else:
             raise NotImplementedError
 
-    def get(self, request_field: str, default=None, noentry=None) -> str:
+    def get(self, request_field: str, default=None, noentry=None) -> Any:
         value = self.storage_object.form.get(request_field, default)
         return value if value != noentry else ""
 
@@ -1039,9 +1041,9 @@ class PySpassApp(ABC):
             return True
         else:
             self.logger.debug("Login will be resolved")
-            login_success = False
+            login_success: bool = False
             if self.request.get("submit_login"):
-                login_success: bool = self.affirm_credentials(self.request.get(self.app_name + "_username_entry"),
+                login_success = self.affirm_credentials(self.request.get(self.app_name + "_username_entry"),
                                                               self.request.get(self.app_name + "_password_entry"))
             if login_success:
                 self.session["success_login"] = True

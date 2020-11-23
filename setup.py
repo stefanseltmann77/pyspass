@@ -5,7 +5,7 @@ with open("README.rst", "r") as fh:
 
 setuptools.setup(
     name="pyspass",
-    version="0.1.1",
+    version="0.1.2",
     author="Stefan Seltmann",
     author_email="s.seltmann06@web.de",
     description="pyspass",
