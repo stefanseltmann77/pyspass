@@ -1,9 +1,10 @@
 from abc import ABC
 from abc import abstractmethod
+from collections.abc import Mapping, Sequence
 from enum import Enum
 from logging import Logger
 from logging import getLogger
-from typing import Dict, List, Optional, Union, Iterator, Any, Mapping, Sequence
+from typing import Optional, Union, Iterator, Any
 
 
 class HtmlObject(ABC):
@@ -22,9 +23,9 @@ class HtmlObject(ABC):
     parent: Optional['HtmlObject'] = None
 
     #: All elements included in the html tag in form of a dict
-    tag_content: Dict
+    tag_content: dict
     #: All css styles included in the html tag in form of a dict
-    css_styles: Dict
+    css_styles: dict
     #: Html id to be inserted in tag
     _id_html: Optional[str]
     #: Html class to be inserted in tag
@@ -203,7 +204,8 @@ class HtmlContainer(HtmlObject, list, ABC):
         return script
 
     def dropdown(self, name, codes_source: Union[Sequence, Mapping], var_input=None, autosubmit: bool = False,
-                 missing_allowed: bool = True, multiple: bool = False, size: int = 1, optgroups: dict = None):
+                 missing_allowed: bool = True, multiple: bool = False, size: int = 1,
+                 optgroups: Optional[Mapping] = None):
         return self.add(HtmlSelect(**{key: value for key, value in locals().items() if key not in 'self'}))
 
     def textinput(self, name, var_input=None, size: int = 20, alignment: str = None, class_html: str = None):
@@ -225,8 +227,10 @@ class HtmlContainer(HtmlObject, list, ABC):
         """Factory function for creation of ResultChoice"""
         return self.add(ResultChoice(**{key: value for key, value in locals().items() if key not in 'self'}))
 
-    def result_editor(self, content: Sequence, listing_index, row_selected=None, mapping=None, show_all: bool = False,
-                      rowcount_max: int = 200, columns_protected: list = None, alignments=None):
+    def result_editor(self, content: Sequence, listing_index: Union[str, Sequence[str]],
+                      row_selected=Union[str, Mapping, Sequence[Mapping]], mapping=Mapping[str, str],
+                      show_all: bool = False, rowcount_max: int = 200, columns_protected: list = None,
+                      alignments=None) -> Union['ResultEditor', HtmlObject]:
         return self.add(ResultEditor(**{key: value for key, value in locals().items() if key not in 'self'}))
 
     def __str__(self):
@@ -260,7 +264,7 @@ class HtmlRow(HtmlContainer):
         return self.add(HtmlCell(content))
 
     def th(self, content: Union[str, Sequence[str]] = None) -> \
-            Union[Union[HtmlCell, HtmlObject], Union[List[HtmlCell], List[HtmlObject]]]:
+            Union[Union[HtmlCell, HtmlObject], Union[list[HtmlCell], list[HtmlObject]]]:
         """Create and add a new header cell object
 
         It is possible to pass along a list of objects or strings. This is sensible especially if you want to
@@ -274,7 +278,7 @@ class HtmlRow(HtmlContainer):
             return self.add(HtmlHeadCell(content))
 
     @property
-    def cells(self) -> List[HtmlCell]:
+    def cells(self) -> list[HtmlCell]:
         return self
 
 
@@ -427,9 +431,9 @@ class ResultChoice(ResultListing):
     PREFIX: str = '_rct_selected_'
 
     _index: Sequence[str]
-    _row_selected: Dict
+    _row_selected: dict
 
-    columns_config: Dict[str, Any]
+    columns_config: dict[str, Any]
 
     def __init__(self, content: Sequence,
                  listing_index: Union[str, Sequence[str]],
@@ -451,8 +455,8 @@ class ResultChoice(ResultListing):
         super().__init__(content, mapping, show_all, rowcount_max, alignments)
         self.listing_index = listing_index
         self.row_selected = row_selected
-        self.columns_config: Dict[str, Any] = {}
-        self.columns_with_mappings: List = []
+        self.columns_config: dict[str, Any] = {}
+        self.columns_with_mappings: list = []
 
     @property
     def row_selected(self):
@@ -508,7 +512,7 @@ class ResultChoice(ResultListing):
                     break
             for index_col in self.listing_index:
                 if self.row_selected:
-                    if isinstance(self.row_selected, List):
+                    if isinstance(self.row_selected, list):
                         post_value = ";".join([str(row[index_col]) for row in self.row_selected])
                     else:
                         post_value = self.row_selected[index_col] if self.row_selected else None
@@ -863,7 +867,7 @@ class HtmlSelect(HtmlInput):
     #: default label used for "no entry"-code
     _missing_code_label = 'No Entry'
 
-    codes_source: Dict[Any, Any]
+    codes_source: dict[Any, Any]
 
     def __init__(self, name, codes_source: Union[Mapping, Sequence], var_input=None, autosubmit: bool = False,
                  missing_allowed: bool = False, multiple: bool = False, size: int = 1, optgroups: dict = None):

@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 
 [dev-packages]
+build = "*"
 pytest = "*"
 mypy = "*"
 flake8 = "*"
@@ -15,4 +16,4 @@ sqlalchemy = "*"
 
 
 [requires]
-python_version = "3.8"
+python_version = "3.9"
