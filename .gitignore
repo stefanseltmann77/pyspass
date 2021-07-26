@@ -2,9 +2,10 @@
 local.py
 /doc/build/
 /.mypy_cache/
-/pyspass/tests/.pytest_cache
+/tests/.pytest_cache
 /pyspass/.mypy_cache/
 /pyspass_pkg.egg-info
 /dist
 /build/
 /pylint.log
+/.pytest_cache/

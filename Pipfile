@@ -6,13 +6,15 @@ name = "pypi"
 [packages]
 
 [dev-packages]
+build = "*"
 pytest = "*"
+pytest-cov = "*"
 mypy = "*"
 flake8 = "*"
 pylint = "*"
 flask = "*"
 sqlalchemy = "*"
-
+twine = "*"
 
 [requires]
-python_version = "3.8"
+python_version = "3.9"
