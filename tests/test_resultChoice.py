@@ -45,7 +45,7 @@ class TestResultChoice:
         rl = html_form.result_choice(content=content_as_dicts, listing_index=['column_1', 'column_2'],
                                      row_selected={})
         rl.compose()
-        print(rl)  # todo elaborate
+        # todo elaborate
 
     def test_row_selection(self, content_as_dicts):
         html_form = HtmlForm(id_html='form_id')

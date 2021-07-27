@@ -65,4 +65,4 @@ class TestHtmlObjects:
         div = HtmlDiv()
         div2 = HtmlDiv()
         div.add(div2)
-        print(div)
+        # todo elaborate

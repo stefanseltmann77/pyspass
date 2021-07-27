@@ -1,10 +1,10 @@
 from abc import ABC
 from abc import abstractmethod
-from collections.abc import Mapping, Sequence
+from collections.abc import Mapping, Sequence, MutableSequence, MutableMapping
 from enum import Enum
 from logging import Logger
 from logging import getLogger
-from typing import Optional, Union, Iterator, Any
+from typing import Optional, Union, Iterator, Any, Protocol
 
 
 class HtmlObject(ABC):
@@ -217,21 +217,23 @@ class HtmlContainer(HtmlObject, list, ABC):
     def textarea(self, name, var_input=None, rows: int = 4, cols: int = 50):
         return self.add(HtmlTextArea(**{key: value for key, value in locals().items() if key not in 'self'}))
 
-    def result_listing(self, content: Sequence, mapping=None, show_all: bool = False,
+    def result_listing(self, content: Sequence, mapping=None, show_all: bool = False, rowcount_max: int = 200,
                        alignments=None) -> Union['ResultListing', HtmlObject]:
-        return self.add(ResultListing(**{key: value for key, value in locals().items() if key not in 'self'}))
+        return self.add(ResultListing(content, mapping, show_all, rowcount_max, alignments))
 
     def result_choice(self, content: Sequence, listing_index: Union[str, Sequence], row_selected=None,
                       mapping: Mapping[str, str] = None, show_all: bool = False, alignments=None,
                       rowcount_max: int = 200) -> Union['ResultChoice', HtmlObject]:
         """Factory function for creation of ResultChoice"""
-        return self.add(ResultChoice(**{key: value for key, value in locals().items() if key not in 'self'}))
+        return self.add(ResultChoice(content, listing_index, row_selected, mapping, show_all, rowcount_max, alignments))
 
     def result_editor(self, content: Sequence, listing_index: Union[str, Sequence[str]],
-                      row_selected=Union[str, Mapping, Sequence[Mapping]], mapping=Mapping[str, str],
+                      row_selected: Union[str, Mapping, Sequence[Mapping]],
+                      mapping: Optional[Mapping[str, str]] = None,
                       show_all: bool = False, rowcount_max: int = 200, columns_protected: list = None,
                       alignments=None) -> Union['ResultEditor', HtmlObject]:
-        return self.add(ResultEditor(**{key: value for key, value in locals().items() if key not in 'self'}))
+        return self.add(ResultEditor(content, listing_index, row_selected, mapping, show_all, rowcount_max,
+                                     columns_protected, alignments))
 
     def __str__(self):
         if self.css_styles:
@@ -341,8 +343,9 @@ class ResultListing(HtmlContainer):
     table: HtmlTable
     content: Sequence
     columns_display: Sequence
+    mapping: Mapping[str, str]
 
-    def __init__(self, content: Sequence, mapping=None, show_all: bool = False,
+    def __init__(self, content: Sequence, mapping: Mapping[str, str] = None, show_all: bool = False,
                  rowcount_max: int = 200, alignments=None):
         """
 
@@ -354,7 +357,7 @@ class ResultListing(HtmlContainer):
         super().__init__()
         self.show_all = show_all
         self.content = content
-        self.mapping = mapping
+        self.mapping = mapping if mapping else {}
         self.rowcount_max: int = rowcount_max
         self.columns_display = []
 
@@ -403,7 +406,7 @@ class ResultListing(HtmlContainer):
                 content_keys_data = self.content[0].keys()
             except:
                 raise NotImplementedError(f"No implemented for content type {type(self.content)}")
-        content_keys: Sequence[Any]
+        content_keys: MutableSequence[Any]
         if self.mapping:
             if not self.show_all:
                 content_keys = [key for key in self.mapping if key in content_keys_data]
@@ -561,10 +564,10 @@ class ResultChoice(ResultListing):
         :param display_size:
         :return:
         """
-        try:
+        if isinstance(codes, Mapping):
             self.columns_config.setdefault(column_name, {})['codes'] = {str(key): value for key, value in codes.items()}
             self.columns_with_mappings.append(column_name)
-        except AttributeError:
+        else:
             self.columns_config.setdefault(column_name, {})['codes'] = codes
         self.columns_config[column_name]['multi_choice'] = multichoice
         self.columns_config[column_name]['display_size'] = display_size
@@ -572,11 +575,13 @@ class ResultChoice(ResultListing):
 
 
 class ResultEditor(ResultChoice):
-    def __init__(self, content: list, listing_index, row_selected, mapping=None, show_all: bool = False,
-                 rowcount_max: int = 200, columns_protected: list = None, alignments=None):
-        super().__init__(content=content, listing_index=listing_index, row_selected=row_selected,
-                         mapping=mapping, show_all=show_all, rowcount_max=rowcount_max, alignments=alignments)
-        self.columns_protected: list = columns_protected or []
+    columns_protected: list[Any]
+
+    def __init__(self, content: Sequence, listing_index, row_selected, mapping: Optional[Mapping[str, str]] = None,
+                 show_all: bool = False, rowcount_max: int = 200, columns_protected: Optional[Sequence] = None,
+                 alignments=None):
+        super().__init__(content, listing_index, row_selected, mapping, show_all, rowcount_max, alignments)
+        self.columns_protected = list(columns_protected) if columns_protected else []
         self.columns_protected.append(listing_index)
 
     def _build_selected_row(self, row):
@@ -867,9 +872,9 @@ class HtmlSelect(HtmlInput):
     #: default label used for "no entry"-code
     _missing_code_label = 'No Entry'
 
-    codes_source: dict[Any, Any]
+    codes_source: Union[MutableMapping, Sequence]
 
-    def __init__(self, name, codes_source: Union[Mapping, Sequence], var_input=None, autosubmit: bool = False,
+    def __init__(self, name, codes_source: Union[MutableMapping, Sequence], var_input=None, autosubmit: bool = False,
                  missing_allowed: bool = False, multiple: bool = False, size: int = 1, optgroups: dict = None):
         """Dropdown element.
 
@@ -883,7 +888,7 @@ class HtmlSelect(HtmlInput):
         """
         super().__init__()
         self.tag_content = {'name': name}
-        if isinstance(codes_source, list):
+        if isinstance(codes_source, Sequence):
             self.codes_source = dict(zip(codes_source, codes_source))
         else:
             self.codes_source = codes_source
@@ -940,8 +945,14 @@ class HtmlSelect(HtmlInput):
         return f'<{self.TAG} {tag_content_str}>{option_str}\n</{self.TAG}>\n'
 
 
+class RequestObject(Protocol):
+    def get(self, *args, **kwargs): ...
+
+    def form(self, *args, **kwargs): ...
+
+
 class PySpassStorage:
-    storage_object: Union[Mapping]
+    storage_object: RequestObject
 
     def get(self, field: str, default=None, noentry=None) -> Any:
         value = self.storage_object.get(field, default)
@@ -950,7 +961,7 @@ class PySpassStorage:
 
 class PySpassRequest(PySpassStorage):
 
-    def __init__(self, request_object, framework: str):
+    def __init__(self, request_object: RequestObject, framework: str):
         self.noentry_default = "-1"
         if framework.lower() == "flask":
             self.storage_object = request_object
@@ -958,7 +969,8 @@ class PySpassRequest(PySpassStorage):
             raise NotImplementedError
 
     def get(self, request_field: str, default=None, noentry=None) -> Any:
-        value = self.storage_object.form.get(request_field, default)
+        # value = self.storage_object.form.get(request_field, default)
+        value = self.storage_object.args.get(request_field, default)
         return value if value != noentry else ""
 
     def get_tuple(self, *args, default=None, noentry=None):
