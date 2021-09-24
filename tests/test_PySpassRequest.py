@@ -63,6 +63,9 @@ class TestPySpassRequest:
             c.post("/?abc=abc")
             assert requ.get_float("not_there") is None
         with flask_app as c:
+            c.post("/?abc=abc")
+            assert requ.get_float("not_there", 0.0) == 0.0
+        with flask_app as c:
             c.post("/?abc=1.23")
             result = requ.get_float("abc")
             assert result == 1.23

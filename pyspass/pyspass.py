@@ -969,8 +969,7 @@ class PySpassRequest(PySpassStorage):
             raise NotImplementedError
 
     def get(self, request_field: str, default=None, noentry=None) -> Any:
-        # value = self.storage_object.form.get(request_field, default)
-        value = self.storage_object.args.get(request_field, default)
+        value = self.storage_object.values.get(request_field, default)
         return value if value != noentry else ""
 
     def get_tuple(self, *args, default=None, noentry=None):
