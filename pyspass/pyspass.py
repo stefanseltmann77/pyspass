@@ -203,26 +203,27 @@ class HtmlContainer(HtmlObject, list, ABC):
         self.add(script)
         return script
 
-    def dropdown(self, name, codes_source: Union[Sequence, Mapping], var_input=None, autosubmit: bool = False,
-                 missing_allowed: bool = True, multiple: bool = False, size: int = 1,
+    def dropdown(self, name: str, codes_source: Union[Sequence, Mapping], var_input: Optional[str] = None,
+                 autosubmit: bool = False, missing_allowed: bool = True, multiple: bool = False, size: int = 1,
                  optgroups: Optional[Mapping] = None):
         return self.add(HtmlSelect(**{key: value for key, value in locals().items() if key not in 'self'}))
 
-    def textinput(self, name, var_input=None, size: int = 20, alignment: str = None, class_html: str = None):
+    def textinput(self, name: str, var_input: Optional[str] = None, size: int = 20, alignment: Optional[str] = None,
+                  class_html: str = None):
         return self.add(HtmlTextInput(**{key: value for key, value in locals().items() if key not in 'self'}))
 
-    def password(self, name, var_input=None, size: int = 20):
+    def password(self, name: str, var_input: Optional[str] = None, size: int = 20):
         return self.add(HtmlPassword(**{key: value for key, value in locals().items() if key not in 'self'}))
 
-    def textarea(self, name, var_input=None, rows: int = 4, cols: int = 50):
+    def textarea(self, name: str, var_input: Optional[str] = None, rows: int = 4, cols: int = 50):
         return self.add(HtmlTextArea(**{key: value for key, value in locals().items() if key not in 'self'}))
 
     def result_listing(self, content: Sequence, mapping=None, show_all: bool = False, rowcount_max: int = 200,
-                       alignments=None) -> Union['ResultListing', HtmlObject]:
+                       alignments: Optional[str] = None) -> Union['ResultListing', HtmlObject]:
         return self.add(ResultListing(content, mapping, show_all, rowcount_max, alignments))
 
     def result_choice(self, content: Sequence, listing_index: Union[str, Sequence], row_selected=None,
-                      mapping: Mapping[str, str] = None, show_all: bool = False, alignments=None,
+                      mapping: Mapping[str, str] = None, show_all: bool = False, alignments: Optional[str] = None,
                       rowcount_max: int = 200) -> Union['ResultChoice', HtmlObject]:
         """Factory function for creation of ResultChoice"""
         return self.add(ResultChoice(content, listing_index, row_selected, mapping, show_all, rowcount_max, alignments))
@@ -231,7 +232,7 @@ class HtmlContainer(HtmlObject, list, ABC):
                       row_selected: Union[str, Mapping, Sequence[Mapping]],
                       mapping: Optional[Mapping[str, str]] = None,
                       show_all: bool = False, rowcount_max: int = 200, columns_protected: list = None,
-                      alignments=None) -> Union['ResultEditor', HtmlObject]:
+                      alignments: Optional[str] = None) -> Union['ResultEditor', HtmlObject]:
         return self.add(ResultEditor(content, listing_index, row_selected, mapping, show_all, rowcount_max,
                                      columns_protected, alignments))
 
@@ -429,7 +430,16 @@ class ResultListing(HtmlContainer):
 
 
 class ResultChoice(ResultListing):
-    """Display object similar to ResultListing, but allows selection of rows"""
+    """Display object similar to ResultListing, but allows selection of rows
+
+    :param content: a list like object to be displayed as a table
+    :param listing_index: column name or sequence of names that identify a row
+    :param row_selected: value, sequence or mapping of values for identification of a row
+                         - if listing_index is just a string, then a string is expected
+                         - if listing_index is a sequence, then either a sequence in the same order
+                           or a mapping with the keys from the listing_index is expected.
+    :param mapping: a map of column names in the content to displayed
+    """
 
     PREFIX: str = '_rct_selected_'
 
@@ -444,7 +454,7 @@ class ResultChoice(ResultListing):
                  mapping: Mapping[str, str] = None,
                  show_all: bool = False,
                  rowcount_max: int = 200,
-                 alignments=None):
+                 alignments: Optional[str] = None):
         """
 
         :param content:
@@ -521,10 +531,10 @@ class ResultChoice(ResultListing):
                         post_value = self.row_selected[index_col] if self.row_selected else None
                 else:
                     post_value = None
-                self.hidden(name=self.PREFIX + index_col,
+                self.hidden(self.PREFIX + index_col,
                             value=post_value,
                             id_html=self.PREFIX + index_col)
-            self.hidden(name=self.PREFIX + trigger_name,
+            self.hidden(self.PREFIX + trigger_name,
                         value='false',
                         id_html=self.PREFIX + trigger_name)
 
@@ -874,9 +884,11 @@ class HtmlSelect(HtmlInput):
 
     codes_source: Union[MutableMapping, Sequence]
 
-    def __init__(self, name, codes_source: Union[MutableMapping, Sequence], var_input=None, autosubmit: bool = False,
-                 missing_allowed: bool = False, multiple: bool = False, size: int = 1, optgroups: dict = None):
-        """Dropdown element.
+    def __init__(self, name: str, codes_source: Union[MutableMapping, Sequence],
+                 var_input: Optional[Union[str, Sequence[str]]] = None, autosubmit: bool = False,
+                 missing_allowed: bool = False, multiple: bool = False, size: int = 1,
+                 optgroups: Optional[dict] = None):
+        """Dropdown element for single or multiple selections
 
         :param codes_source:
         :param var_input:
@@ -892,16 +904,10 @@ class HtmlSelect(HtmlInput):
             self.codes_source = dict(zip(codes_source, codes_source))
         else:
             self.codes_source = codes_source
-        if isinstance(var_input, list):
+        if isinstance(var_input, Sequence):
             self.var_input = list(map(str, var_input))
         else:
-            try:
-                if multiple:
-                    self.var_input = var_input.get_list(name + "[]")
-                else:
-                    self.var_input = [str(var_input.get(name))]
-            except AttributeError:
-                self.var_input = [str(var_input)]
+            self.var_input = [str(var_input)]
         self.autosubmit = autosubmit
         self.missing_allowed = missing_allowed
         self.multiple = multiple
