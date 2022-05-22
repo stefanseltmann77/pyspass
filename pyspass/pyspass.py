@@ -134,18 +134,18 @@ class HtmlContainer(HtmlObject, list, ABC):
         self.add(table)
         return table
 
-    def h1(self, content=None):
-        h1 = HtmlH1(content)
+    def h1(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
+        h1 = HtmlH1(content, id_html, class_html)
         self.add(h1)
         return h1
 
-    def h2(self, content=None):
-        h2 = HtmlH2(content)
+    def h2(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
+        h2 = HtmlH2(content, id_html, class_html)
         self.add(h2)
         return h2
 
-    def h3(self, content=None):
-        h3 = HtmlH3(content)
+    def h3(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
+        h3 = HtmlH3(content, id_html, class_html)
         self.add(h3)
         return h3
 
@@ -679,8 +679,8 @@ class HtmlInput(HtmlObject):
 class HtmlH1(HtmlContainer):
     TAG: str = 'h1'
 
-    def __init__(self, content=None):
-        super().__init__()
+    def __init__(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
+        super().__init__(id_html, class_html)
         if content:
             self.add(content)
 
@@ -865,10 +865,10 @@ class HtmlRadio(HtmlInput):
 class HtmlCheckbox(HtmlInput):
     def __init__(self, name, value, var_input: Union[int, str] = None, autosubmit: bool = False,
                  id_html: str = None, class_html: str = None):
-        super().__init__(id_html=id_html, class_html=class_html)
-        self.tag_content = {'type': 'checkbox',
-                            'name': name,
-                            'value': value}
+        super().__init__(id_html, class_html)
+        self.tag_content.update({'type': 'checkbox',
+                                 'name': name,
+                                 'value': value})
         if autosubmit:
             self.tag_content["onclick"] = "submit()"
         if str(var_input) == str(value):
