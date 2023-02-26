@@ -9,3 +9,4 @@ local.py
 /build/
 /pylint.log
 /.pytest_cache/
+/pyspass.egg-info/

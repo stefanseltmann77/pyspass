@@ -23,9 +23,9 @@ class HtmlObject(ABC):
     parent: Optional['HtmlObject'] = None
 
     #: All elements included in the html tag in form of a dict
-    tag_content: dict
+    tag_content: dict[str, Union[str, int, None]]
     #: All css styles included in the html tag in form of a dict
-    css_styles: dict
+    css_styles: dict[str, Union[str, int]]
     #: Html id to be inserted in tag
     _id_html: Optional[str]
     #: Html class to be inserted in tag
@@ -33,19 +33,19 @@ class HtmlObject(ABC):
     #: Depth of indentation for nicely formatted html
     indents: int = 0
 
-    def __init__(self, id_html: str = None, class_html: str = None):
-        self.tag_content: dict = {}
-        self.css_styles: dict = {}
+    def __init__(self, id_html: Optional[str] = None, class_html: Optional[str] = None):
+        self.tag_content = {}
+        self.css_styles = {}
         self.id_html = id_html
         self.class_html = class_html
         self.indents: int = 0
 
     @property
-    def id_html(self):
+    def id_html(self) -> Optional[str]:
         return self._id_html
 
     @id_html.setter
-    def id_html(self, value):
+    def id_html(self, value) -> None:
         self._id_html = value
         if value:
             self.tag_content['id'] = value
@@ -97,34 +97,33 @@ class HtmlContainer(HtmlObject, list, ABC):
             content.parent = self
             content.indents += 1
             return content
-        else:
-            return self
+        return self
 
-    def br(self, count: int = 1):
+    def br(self, count: int = 1) -> 'HtmlContainer':
         for i in range(count):
             self.append('<br />\n')
         return self
 
-    def hr(self):
+    def hr(self) -> 'HtmlContainer':
         self.append('<hr />\n')
         return self
 
-    def div(self, content=None, id_html: str = None, class_html: str = None):
+    def div(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None) -> 'HtmlDiv':
         div = HtmlDiv(content, id_html=id_html, class_html=class_html)
         self.add(div)
         return div
 
-    def p(self, content=None, id_html: str = None, class_html: str = None):
+    def p(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None) -> 'HtmlP':
         p = HtmlP(content, id_html=id_html, class_html=class_html)
         self.add(p)
         return p
 
-    def span(self, content=None, id_html: str = None, class_html: str = None):
+    def span(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None) -> 'HtmlSpan':
         span = HtmlSpan(content, id_html=id_html, class_html=class_html)
         self.add(span)
         return span
 
-    def form(self, id_html: str = None):
+    def form(self, id_html: Optional[str] = None) -> 'HtmlForm':
         form = HtmlForm(id_html)
         self.add(form)
         return form
@@ -134,48 +133,49 @@ class HtmlContainer(HtmlObject, list, ABC):
         self.add(table)
         return table
 
-    def h1(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
+    def h1(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None) -> 'HtmlH1':
         h1 = HtmlH1(content, id_html, class_html)
         self.add(h1)
         return h1
 
-    def h2(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
+    def h2(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None) -> 'HtmlH2':
         h2 = HtmlH2(content, id_html, class_html)
         self.add(h2)
         return h2
 
-    def h3(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
+    def h3(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None) -> 'HtmlH3':
         h3 = HtmlH3(content, id_html, class_html)
         self.add(h3)
         return h3
 
-    def link(self, content=None, href: str = None, target: str = "_blank"):
+    def link(self, content: Optional[Any] = None, href: Optional[str] = None, target: str = "_blank") -> 'HtmlLink':
         link = HtmlLink(**{key: value for key, value in locals().items() if key not in 'self'})
         self.add(link)
         return link
 
-    def label(self, content: str = None, for_id: str = None) -> 'HtmlLabel':
+    def label(self, content: Optional[str] = None, for_id: Optional[str] = None) -> 'HtmlLabel':
         label = HtmlLabel(content=content, for_id=for_id)
         self.add(label)
         return label
 
-    def hidden(self, name, value=None, id_html: str = None) -> 'HtmlHidden':
+    def hidden(self, name, value=None, id_html: Optional[str] = None) -> 'HtmlHidden':
         hidden = HtmlHidden(name=name, value=value, id_html=id_html)
         self.add(hidden)
         return hidden
 
-    def submit(self, name: Union[str, Enum], value=None, id_html: str = None, class_html: str = None) -> 'HtmlSubmit':
+    def submit(self, name: Union[str, Enum], value=None, id_html: Optional[str] = None,
+               class_html: Optional[str] = None) -> 'HtmlSubmit':
         sub = HtmlSubmit(name=name, value=value, id_html=id_html, class_html=class_html)
         self.add(sub)
         return sub
 
-    def button(self, name: str, value=None, id_html: str = None, class_html: str = None):
+    def button(self, name: str, value=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
         sub = HtmlButton(name=name, value=value, id_html=id_html, class_html=class_html)
         self.add(sub)
         return sub
 
-    def checkbox(self, name, value=1, label=None, var_input: Union[int, str] = None, autosubmit: bool = False,
-                 id_html: str = None, class_html: str = None, label_trailing: bool = True):
+    def checkbox(self, name, value=1, label=None, var_input: Union[int, str, None] = None, autosubmit: bool = False,
+                 id_html: Optional[str] = None, class_html: Optional[str] = None, label_trailing: bool = True):
         """
 
         :param label_trailing: If true, the label will be added after the checkbos. If false, the label comes first.
@@ -191,7 +191,8 @@ class HtmlContainer(HtmlObject, list, ABC):
             self.add(label)
         return chkbx
 
-    def script(self, content: str = None, src: str = None, script_type: str = None) -> 'HtmlScript':
+    def script(self, content: Optional[str] = None, src: Optional[str] = None,
+               script_type: Optional[str] = None) -> 'HtmlScript':
         """Register a script file for the header
 
         :param content: TODO
@@ -209,7 +210,7 @@ class HtmlContainer(HtmlObject, list, ABC):
         return self.add(HtmlSelect(**{key: value for key, value in locals().items() if key not in 'self'}))
 
     def textinput(self, name: str, var_input: Optional[str] = None, size: int = 20, alignment: Optional[str] = None,
-                  class_html: str = None):
+                  class_html: Optional[str] = None):
         return self.add(HtmlTextInput(**{key: value for key, value in locals().items() if key not in 'self'}))
 
     def password(self, name: str, var_input: Optional[str] = None, size: int = 20):
@@ -223,15 +224,17 @@ class HtmlContainer(HtmlObject, list, ABC):
         return self.add(ResultListing(content, mapping, show_all, rowcount_max, alignments))
 
     def result_choice(self, content: Sequence, listing_index: Union[str, Sequence], row_selected=None,
-                      mapping: Mapping[str, str] = None, show_all: bool = False, alignments: Optional[str] = None,
-                      rowcount_max: int = 200) -> Union['ResultChoice', HtmlObject]:
+                      mapping: Optional[Mapping[str, str]] = None, show_all: bool = False,
+                      alignments: Optional[str] = None, rowcount_max: int = 200) -> Union['ResultChoice', HtmlObject]:
         """Factory function for creation of ResultChoice"""
         return self.add(ResultChoice(content, listing_index, row_selected, mapping, show_all, rowcount_max, alignments))
 
     def result_editor(self, content: Sequence, listing_index: Union[str, Sequence[str]],
                       row_selected: Union[str, Mapping, Sequence[Mapping]],
                       mapping: Optional[Mapping[str, str]] = None,
-                      show_all: bool = False, rowcount_max: int = 200, columns_protected: list = None,
+                      show_all: bool = False,
+                      rowcount_max: int = 200,
+                      columns_protected: Optional[Sequence[str]] = None,
                       alignments: Optional[str] = None) -> Union['ResultEditor', HtmlObject]:
         return self.add(ResultEditor(content, listing_index, row_selected, mapping, show_all, rowcount_max,
                                      columns_protected, alignments))
@@ -266,7 +269,7 @@ class HtmlRow(HtmlContainer):
         """Returns the cell, if a string is supplied, but an object, if an object is added"""
         return self.add(HtmlCell(content))
 
-    def th(self, content: Union[str, Sequence[str]] = None) -> \
+    def th(self, content: Union[None, str, Sequence[str]] = None) -> \
             Union[Union[HtmlCell, HtmlObject], Union[list[HtmlCell], list[HtmlObject]]]:
         """Create and add a new header cell object
 
@@ -310,7 +313,7 @@ class HtmlTable(HtmlContainer):
         for row in self:
             yield row
 
-    def tr(self):
+    def tr(self) -> HtmlRow:
         row = HtmlRow()
         self.add(row)
         return row
@@ -341,12 +344,12 @@ class ResultListing(HtmlContainer):
 
     """
 
-    table: HtmlTable
-    content: Sequence
-    columns_display: Sequence
-    mapping: Mapping[str, str]
+    table_: HtmlTable
+    content: Sequence[Any]
+    columns_display: Sequence[Any]
+    mapping: Optional[Mapping[str, str]]
 
-    def __init__(self, content: Sequence, mapping: Mapping[str, str] = None, show_all: bool = False,
+    def __init__(self, content: Sequence[Any], mapping: Optional[Mapping[str, str]] = None, show_all: bool = False,
                  rowcount_max: int = 200, alignments=None):
         """
 
@@ -363,7 +366,7 @@ class ResultListing(HtmlContainer):
         self.columns_display = []
 
         tab: HtmlTable = super().table()
-        self.table = tab
+        self.table_ = tab
         headrow = tab.tr()
         if content:
             self.columns_display = self._derive_columnnames_for_display()
@@ -444,14 +447,14 @@ class ResultChoice(ResultListing):
     PREFIX: str = '_rct_selected_'
 
     _index: Sequence[str]
-    _row_selected: dict
+    _row_selected: dict[str, Any]
 
     columns_config: dict[str, Any]
 
-    def __init__(self, content: Sequence,
+    def __init__(self, content: Sequence[Any],
                  listing_index: Union[str, Sequence[str]],
                  row_selected: Union[str, Mapping, Sequence[Mapping]],
-                 mapping: Mapping[str, str] = None,
+                 mapping: Optional[Mapping[str, str]] = None,
                  show_all: bool = False,
                  rowcount_max: int = 200,
                  alignments: Optional[str] = None):
@@ -489,14 +492,14 @@ class ResultChoice(ResultListing):
     def listing_index(self, value):
         self._index = value if not isinstance(value, str) else [value, ]
 
-    def compose(self):
+    def compose(self) -> None:
         """Composes the final html composite object as a final step after all settings have been done."""
         parent_form: Optional[HtmlForm] = self.get_form()
         if not isinstance(parent_form, HtmlForm):
             raise Exception('ResultChoices have to be direct or indirect children of a form with an unique ID!')
-        id_html_parentform: str = parent_form.id_html
-        if not id_html_parentform:
+        if not parent_form.id_html:
             raise Exception("Only works if parent form has unique ID")
+        id_html_parentform: str = parent_form.id_html
         if self.content:
             trigger_name = 'trigger_' + (self.id_html if self.id_html else 'result_choice')
             for index_col in self.listing_index:
@@ -506,7 +509,7 @@ class ResultChoice(ResultListing):
                         f"Listing_index '{index_col}' not in list content ({list(self.content[0].keys())})!")
             for i, row_dat in enumerate(self.content):
                 if i < self.rowcount_max:
-                    row: HtmlRow = self.table[i + 1]  # +1 for header
+                    row: HtmlRow = self.table_[i + 1]  # +1 for header
                     if isinstance(self.row_selected, list):
                         row.tag_content["onclick"] = f"entryMultiChoiceSetSelection('{id_html_parentform}', " \
                                                      f"'{self._index[0]}', '{row_dat[self._index[0]]}');"
@@ -554,15 +557,14 @@ class ResultChoice(ResultListing):
               all(str(row_dat[index_col]) == str(self.row_selected.get(index_col))
                   for index_col in self.listing_index)):
             return True
-        else:
-            return False
+        return False
 
     def _build_selected_row(self, row):
         row.css_styles['color'] = 'white'
         row.css_styles['background'] = 'grey'
 
     def set_codes(self, column_name: str, codes: Union[Sequence, Mapping],
-                  multichoice: bool = False, display_size: int = 1):
+                  multichoice: bool = False, display_size: int = 1) -> 'ResultChoice':
         """Assign a code mapping to a given column name.
 
         Codes/values within the column will be replaced by values from the mapping.
@@ -626,7 +628,7 @@ class HtmlBody(HtmlContainer):
 class HtmlHead(HtmlContainer):
     TAG: str = 'head'
 
-    def resourcelink(self, rel: str, href: str, linktype: str = None) -> 'HtmlResource':
+    def resourcelink(self, rel: str, href: str, linktype: Optional[str] = None) -> 'HtmlResource':
         """Add a link pointing to a resource for the header
 
         :param rel: which type of resource, e.g. "stylesheet"
@@ -642,9 +644,9 @@ class HtmlHead(HtmlContainer):
 class HtmlPage:
     body: HtmlBody
     head: HtmlHead
-    root_app = None
+    root_app: Optional[Any] = None
 
-    def __init__(self, root_app=None):
+    def __init__(self, root_app: Optional[Any] = None):
         self.root_app = root_app
         self.head = HtmlHead()
         self.body = HtmlBody()
@@ -669,7 +671,7 @@ class HtmlOption(HtmlContainer):
 class HtmlInput(HtmlObject):
     TAG: str = 'input'
 
-    def __str__(self):
+    def __str__(self) -> str:
         if self.css_styles:
             self.tag_content['style'] = ";".join([f"{key}: {value}" for key, value in self.css_styles.items()])
         tag_content_str = ' '.join([f'{key}="{value}"' for key, value in self.tag_content.items()])
@@ -679,7 +681,7 @@ class HtmlInput(HtmlObject):
 class HtmlH1(HtmlContainer):
     TAG: str = 'h1'
 
-    def __init__(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
+    def __init__(self, content: Optional[Any] = None, id_html: Optional[str] = None, class_html: Optional[str] = None):
         super().__init__(id_html, class_html)
         if content:
             self.add(content)
@@ -696,7 +698,7 @@ class HtmlH3(HtmlH1):
 class HtmlP(HtmlContainer):
     TAG: str = 'p'
 
-    def __init__(self, content=None, id_html: str = None, class_html: str = None):
+    def __init__(self, content: Optional[Any] = None, id_html: Optional[str] = None, class_html: Optional[str] = None):
         super().__init__(id_html=id_html, class_html=class_html)
         if content:
             self.append(content)
@@ -705,7 +707,8 @@ class HtmlP(HtmlContainer):
 class HtmlLabel(HtmlContainer):
     TAG: str = 'label'
 
-    def __init__(self, content: str = None, for_id: str = None, id_html: str = None, class_html: str = None):
+    def __init__(self, content: Optional[str] = None, for_id: Optional[str] = None, id_html: Optional[str] = None,
+                 class_html: Optional[str] = None):
         super().__init__(id_html=id_html, class_html=class_html)
         if content:
             self.append(content)
@@ -716,8 +719,8 @@ class HtmlLabel(HtmlContainer):
 class HtmlLink(HtmlContainer):
     TAG: str = 'a'
 
-    def __init__(self, content: str = None, href: str = None, target: str = "_blank",
-                 id_html: str = None, class_html: str = None):
+    def __init__(self, content: Optional[str] = None, href: Optional[str] = None, target: str = "_blank",
+                 id_html: Optional[str] = None, class_html: Optional[str] = None):
         """
         If content is left empty, href will be taken instead.
         """
@@ -732,7 +735,7 @@ class HtmlLink(HtmlContainer):
 class HtmlResource(HtmlContainer):
     TAG: str = 'link'
 
-    def __init__(self, rel: str, href: str, linktype: str = None):
+    def __init__(self, rel: str, href: str, linktype: Optional[str] = None):
         super().__init__()
         self.tag_content['href'] = href
         self.tag_content['rel'] = rel
@@ -743,7 +746,7 @@ class HtmlResource(HtmlContainer):
 class HtmlSpan(HtmlContainer):
     TAG: str = 'span'
 
-    def __init__(self, content=None, id_html: str = None, class_html: str = None):
+    def __init__(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
         super().__init__(id_html=id_html, class_html=class_html)
         if content:
             self.append(content)
@@ -754,7 +757,7 @@ class HtmlSpan(HtmlContainer):
 class HtmlDiv(HtmlContainer):
     TAG: str = 'div'
 
-    def __init__(self, content=None, id_html: str = None, class_html: str = None):
+    def __init__(self, content=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
         super().__init__(id_html=id_html, class_html=class_html)
         if content:
             self.append(content)
@@ -772,7 +775,7 @@ class HtmlForm(HtmlDiv):
 class HtmlScript(HtmlContainer):
     TAG: str = 'script'
 
-    def __init__(self, content: str = None, src: str = None, script_type: str = None):
+    def __init__(self, content: Optional[str] = None, src: Optional[str] = None, script_type: Optional[str] = None):
         super().__init__()
         self.script_type = script_type
         if content:
@@ -782,7 +785,7 @@ class HtmlScript(HtmlContainer):
 
 
 class HtmlHidden(HtmlInput):
-    def __init__(self, name: str, value: str = None, id_html: str = None):
+    def __init__(self, name: str, value: Optional[str] = None, id_html: Optional[str] = None):
         super().__init__(id_html=id_html)
         self.tag_content['type'] = 'hidden'
         self.tag_content['name'] = name
@@ -791,7 +794,8 @@ class HtmlHidden(HtmlInput):
 
 
 class HtmlSubmit(HtmlInput):
-    def __init__(self, name: Union[str, Enum], value=None, id_html: str = None, class_html=None):
+    def __init__(self, name: Union[str, Enum], value=None, id_html: Optional[str] = None,
+                 class_html: Optional[str] = None):
         super().__init__(id_html=id_html, class_html=class_html)
         self.tag_content.update({'type': 'submit',
                                  'name': str(name)})
@@ -800,7 +804,7 @@ class HtmlSubmit(HtmlInput):
 
 
 class HtmlButton(HtmlInput):
-    def __init__(self, name: str, value=None, id_html: str = None, class_html=None):
+    def __init__(self, name: str, value=None, id_html: Optional[str] = None, class_html: Optional[str] = None):
         super().__init__(id_html=id_html, class_html=class_html)
         self.tag_content.update({'type': 'button',
                                  'name': name})
@@ -863,8 +867,8 @@ class HtmlRadio(HtmlInput):
 
 
 class HtmlCheckbox(HtmlInput):
-    def __init__(self, name, value, var_input: Union[int, str] = None, autosubmit: bool = False,
-                 id_html: str = None, class_html: str = None):
+    def __init__(self, name, value, var_input: Optional[Union[int, str]] = None, autosubmit: Optional[bool] = False,
+                 id_html: Optional[str] = None, class_html: Optional[str] = None):
         super().__init__(id_html, class_html)
         self.tag_content.update({'type': 'checkbox',
                                  'name': name,
@@ -904,16 +908,21 @@ class HtmlSelect(HtmlInput):
             self.codes_source = dict(zip(codes_source, codes_source))
         else:
             self.codes_source = codes_source
+        # FIXME resolve with setter for var_input to _var_input
         if isinstance(var_input, Sequence):
-            self.var_input = list(map(str, var_input))
+            self.var_input: Optional[list[Any]] = list(map(str, var_input))
         else:
-            try:
-                if multiple:
-                    self.var_input = var_input.get_list(name + "[]")
-                else:
-                    self.var_input = [str(var_input.get(name))]
-            except AttributeError:
-                self.var_input = [str(var_input)]
+            if var_input:
+                try:
+                    if multiple:
+                        self.var_input = var_input.get_list(name + "[]")
+                    else:
+                        self.var_input = [str(var_input.get(name))]
+                except AttributeError:
+                    self.var_input = [str(var_input)]
+            else:
+                self.var_input = []
+
         self.autosubmit = autosubmit
         self.missing_allowed = missing_allowed
         self.multiple = multiple
@@ -958,6 +967,8 @@ class HtmlSelect(HtmlInput):
 
 
 class RequestObject(Protocol):
+    values: Any
+
     def get(self, *args, **kwargs): ...
 
     def form(self, *args, **kwargs): ...
@@ -987,7 +998,8 @@ class PySpassRequest(PySpassStorage):
     def get_tuple(self, *args, default=None, noentry=None):
         return (self.get(arg, default=default, noentry=noentry) for arg in args)
 
-    def get_int(self, request_field: str, default: int = None, noentry: int = None) -> Optional[int]:
+    def get_int(self, request_field: str, default: Optional[int] = None, noentry: Optional[int] = None) -> \
+            Optional[int]:
         value = self.get(request_field, default=default, noentry=noentry)
         try:
             return int(value)
@@ -995,10 +1007,12 @@ class PySpassRequest(PySpassStorage):
             return None
 
     def get_list(self, request_field: str) -> list:
-        value_list = self.storage_object.form.getlist(request_field.strip("[]") + "[]")  # ensure closing brackets
+        value_list = self.storage_object.form.getlist(request_field.strip("[]") + "[]")  # type: ignore
+        # ensure closing brackets
         return value_list if isinstance(value_list, list) else [value_list]
 
-    def get_float(self, request_field: str, default: float = None, noentry: float = None) -> Optional[float]:
+    def get_float(self, request_field: str, default: Optional[float] = None, noentry: Optional[float] = None) \
+            -> Optional[float]:
         value = self.get(request_field, default=default, noentry=noentry)
         try:
             return float(value)
@@ -1065,19 +1079,17 @@ class PySpassApp(ABC):
         if self.session.get("success_login"):
             self.logger.debug("Login already established")
             return True
-        else:
-            self.logger.debug("Login will be resolved")
-            login_success: bool = False
-            if self.request.get("submit_login"):
-                login_success = self.affirm_credentials(self.request.get(self.app_name + "_username_entry"),
-                                                        self.request.get(self.app_name + "_password_entry"))
-            if login_success:
-                self.session["success_login"] = True
-                self.logger.debug("Login successful")
-                return True
-            else:
-                self.display_login_form()
-                return False
+        self.logger.debug("Login will be resolved")
+        login_success: bool = False
+        if self.request.get("submit_login"):
+            login_success = self.affirm_credentials(self.request.get(self.app_name + "_username_entry"),
+                                                    self.request.get(self.app_name + "_password_entry"))
+        if login_success:
+            self.session["success_login"] = True
+            self.logger.debug("Login successful")
+            return True
+        self.display_login_form()
+        return False
 
     @abstractmethod
     def affirm_credentials(self, username: str, password: str):

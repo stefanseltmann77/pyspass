@@ -21,7 +21,7 @@ class TestResultChoice:
         html_form = HtmlForm(id_html='form_id')
         rl = html_form.result_choice(content=content_as_dicts, listing_index='column_1', row_selected=None)
         rl.compose()
-        assert len(rl.table) == len(content_as_dicts) + 1  # +1 for header
+        assert len(rl.table_) == len(content_as_dicts) + 1  # +1 for header
 
     def test_constructor_without_valid_parentform(self, content_as_dicts):
         # if no form with an unique id is present, an error has to be raised
@@ -146,13 +146,13 @@ class TestResultChoice:
         from sqlalchemy import Table, MetaData, Column, Integer, String, select
         from sqlalchemy import create_engine
         con = create_engine('sqlite://').connect()
-        meta = MetaData(bind=con)
+        meta = MetaData()
         tab = Table("test_table", meta,
                     Column("column_a", Integer),
                     Column("column_b", String))
-        meta.create_all()
+        meta.create_all(con)
         con.execute(tab.insert().values((1, "a")))
-        result = con.execute(select([tab.c.column_b])).fetchall()
+        result = con.execute(select(tab.c.column_b)).mappings().fetchall()
 
         html_form = HtmlForm(id_html='form_id')
         rc: ResultChoice = html_form.result_choice(content=result, listing_index='not_there')
