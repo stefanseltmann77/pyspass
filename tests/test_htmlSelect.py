@@ -32,6 +32,7 @@ class TestHtmlSelect:
         assert '<option value="B" selected="selected">B</option>' in str(drop)
 
     def test_dropdown_with_content_as_list_and_input_as_list_of_multiple_str_with_option_false(self):
+        # FIXME is this test really intended if multiple is false?
         div = HtmlDiv()
         drop = div.dropdown('abc', ['A', 'B', 'C', 'D'], var_input=['B', 'C'], multiple=False)
         assert '<option value="B" selected="selected">B</option>' in str(drop)
@@ -51,3 +52,8 @@ class TestHtmlSelect:
         assert '<option value="B">Code B</option>' in str(drop)
         assert '<option value="C">Code C</option>' in str(drop)
         assert '<option value="D">Code D</option>' in str(drop)
+
+    def test_dropdown_with_content_as_list_and_input_as_string_list(self):
+        div = HtmlDiv()
+        drop = div.dropdown('abc', ['Abc', 'Bcd', 'Cde', 'Def'], var_input='Bcd', multiple=False)
+        assert '<option value="Bcd" selected="selected">Bcd</option>' in str(drop)
