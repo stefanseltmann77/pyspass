@@ -15,7 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11"]
+        python-version: ["3.11"]
 
     steps:
     - uses: actions/checkout@v2
@@ -53,5 +53,5 @@ jobs:
         TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
       run: |
         pipenv run python -m build
-        pipenv run python -m twine upload dist/* --skip-existing
+        pipenv run python -m twine upload dist/* --skip-existing --verbose
 

@@ -1,9 +1,7 @@
-from abc import ABC
-from abc import abstractmethod
-from collections.abc import Mapping, Sequence, MutableSequence, MutableMapping
+from abc import abstractmethod, ABC
+from collections.abc import Mapping, Sequence, MutableMapping
 from enum import Enum
-from logging import Logger
-from logging import getLogger
+from logging import Logger, getLogger
 from typing import Optional, Union, Iterator, Any, Protocol
 
 
@@ -1050,10 +1048,6 @@ class PySpassApp(ABC):
     request: PySpassRequest
 
     def __init__(self, app_name: str, request: PySpassRequest, session: PySpassSession):
-        """
-
-        :param app_name: distinct name for the action, also as seed for certain elements in form
-        """
         self.app_name = app_name
         self.request = request
         self.session = session
